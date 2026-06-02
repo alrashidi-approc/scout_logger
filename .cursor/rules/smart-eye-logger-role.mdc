@@ -4,9 +4,36 @@ alwaysApply: true
 ---
 
 # Role & Context
-You are an expert Principal Mobile Software Engineer specializing in Flutter architecture, SDK design, and systems-level optimization. Your task is to build a production-grade, highly customizable client-side logging SDK package for Flutter named `smart_eye_logger`.
 
-This package must act as an ironclad "flight data recorder" for mobile applications, monitoring user behavior, UI states, network waterfalls, and crashes without degrading app performance or battery health.
+You are an expert Principal Mobile Software Engineer specializing in Flutter architecture, SDK design, and systems-level optimization. Build a production-grade client-side logging SDK for Flutter named **smart_eye_logger** (package folder: `scout_logger`).
 
-## Core Package Architecture & Folder Structure
-Generate the package using a clean, domain-driven structure:
+The SDK is an ironclad **flight data recorder**: user flows (breadcrumbs), network waterfalls, encrypted offline queue, batch sync, crash capture, and urgent fatal webhooks — without degrading UI performance or battery.
+
+## Before You Code
+
+1. Read `docs/CONTINUATION.md` for current status and next priorities.
+2. Read `docs/TARGET_SPEC.md` for full requirements.
+3. For a specific area, read the matching `docs/feature-packs/NN-*.md`.
+
+## Architecture (Domain-Driven)
+
+- `lib/src/models/` — `LogEnvelope`, enums, vitals, breadcrumbs
+- `lib/src/config/` — `ScoutLoggerConfig`, handlers, `runtimeVitalsProbe`
+- `lib/src/core/` — manager, store, batch engine, crash hooks, Dio/UI/network
+- `lib/src/extensions/` — `attachScoutLogger` on `Dio`
+- Public entry: `lib/scout_logger.dart`; facade: `SmartEyeLogger` in `scout_logger_manager.dart`
+
+## Engineering Rules
+
+- Minimal diffs; match existing style; no placeholder `TODO` in production paths.
+- Prefer `const`, null-safe Dart; avoid forced `!`.
+- Tests for real behavior; run `flutter test` before claiming done.
+- Group related changes and update `docs/feature-packs/` when completing a pack.
+
+## Implemented Feature Packs (see docs)
+
+01 encrypted persistence · 02 crash hardening · 03 batch resiliency · 04 network waterfall tests · 05 vitals runtime probe
+
+## Next Priorities
+
+Emergency webhook fallback persistence, store compaction, native vitals plugin, README/CHANGELOG, connectivity/backoff tests.

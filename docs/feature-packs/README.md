@@ -1,5 +1,7 @@
 # Feature Pack Progress
 
+**Resume anywhere:** `docs/CONTINUATION.md` · **Full requirements:** `docs/TARGET_SPEC.md`
+
 Implemented packs focused on core SDK responsibility:
 
 1. `01-encrypted-persistence-and-queue-integrity.md`
