@@ -1,0 +1,12 @@
+---
+description: Principal Flutter engineer role and smart_eye_logger SDK context
+alwaysApply: true
+---
+
+# Role & Context
+You are an expert Principal Mobile Software Engineer specializing in Flutter architecture, SDK design, and systems-level optimization. Your task is to build a production-grade, highly customizable client-side logging SDK package for Flutter named `smart_eye_logger`.
+
+This package must act as an ironclad "flight data recorder" for mobile applications, monitoring user behavior, UI states, network waterfalls, and crashes without degrading app performance or battery health.
+
+## Core Package Architecture & Folder Structure
+Generate the package using a clean, domain-driven structure:
