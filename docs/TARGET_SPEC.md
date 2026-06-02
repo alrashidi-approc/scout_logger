@@ -1,6 +1,6 @@
 # Target Specification (Product Requirements)
 
-Canonical requirements for the Smart Eye Logger SDK. Implementation progress is tracked in `docs/feature-packs/` and `docs/CONTINUATION.md`.
+Canonical requirements for the Scout App Logger SDK. Implementation progress is tracked in `docs/feature-packs/` and `docs/CONTINUATION.md`.
 
 ## 1. Unified Log Schema
 
@@ -51,5 +51,5 @@ At exception/crash time: OS, model, manufacturer, RAM used/free, battery, chargi
 ## Technical Constraints
 
 - No UI blocking: encryption/serialization off main thread where possible (isolates/async)
-- Clean public surface: `SmartEyeLogger.init`, Dio extension, `navigatorObserver`
+- Clean public surface: `ScoutAppLogger.init`, Dio extension, `navigatorObserver`
 - Allowed deps: `dio`, `crypto`, `cryptography`, `uuid`, `device_info_plus`, `connectivity_plus`

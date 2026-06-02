@@ -1,6 +1,6 @@
 # Continue Development Anywhere
 
-Use this file to resume work on the Smart Eye Logger SDK (`scout_logger` package on disk).
+Use this file to resume work on the Scout App Logger SDK (`scout_logger` package on disk).
 
 ## Repository
 
@@ -10,7 +10,7 @@ Use this file to resume work on the Smart Eye Logger SDK (`scout_logger` package
 
 ## Cursor / Agent Context
 
-- **Workspace rule:** `.cursor/rules/smart-eye-logger-role.mdc` (always applied)
+- **Workspace rule:** `.cursor/rules/scout-app-logger-role.mdc` (always applied)
 - **Feature pack docs:** `docs/feature-packs/` (grouped implementation history)
 - **This handoff:** `docs/CONTINUATION.md`
 
@@ -18,7 +18,7 @@ Use this file to resume work on the Smart Eye Logger SDK (`scout_logger` package
 
 Production-grade Flutter client logging SDK — a mobile “flight data recorder” for UI breadcrumbs, network waterfalls, encrypted offline queue, batch upload, crash hooks, and urgent fatal dispatch — without blocking the UI thread.
 
-Public API naming target: `SmartEyeLogger` (facade exists; internal types still use `Scout*` in places).
+Public API naming target: `ScoutAppLogger` (facade exists; internal types still use `Scout*` in places).
 
 ## Session History (What Was Built)
 
@@ -43,7 +43,7 @@ flutter test
 ## Integration Quick Start (Host App)
 
 ```dart
-final logger = await SmartEyeLogger.init(
+final logger = await ScoutAppLogger.init(
   ScoutLoggerConfig(
     flavor: 'production',
     bulkUploadHandler: (logs) async { /* POST batch */ return true; },
@@ -76,15 +76,28 @@ MaterialApp(
 | 5 | `FlutterError` + `PlatformDispatcher` crash hooks | Done |
 | 6 | Encrypted storage + chrono batch (50 / 120s) + offline backoff | Done (file AES-GCM, not Isar) |
 | 7 | `updateLogLevelsRemote` | Done |
-| 8 | Fatal/critical emergency webhook bypass | Done |
+| 8 | Fatal/critical emergency webhook bypass + retry on failure | Done |
+
+## Deferred (by product choice)
+
+- **Store compaction** — rewrite file after skipping corrupted lines.
+- **Native vitals plugin** — package stays Dart-only; hosts use `runtimeVitalsProbe` or their own channel.
+
+## Example demo
+
+`example/` — run `cd example && flutter run` for interactive SDK showcase (see `example/README.md`).
 
 ## Recommended Next Work (Priority Order)
 
-1. **Emergency dispatch fallback** — persist failed urgent webhooks and retry.
-2. **Store compaction** — rewrite file after skipping corrupted lines.
-3. **Native vitals plugin** — battery/thermal/RAM without host `runtimeVitalsProbe`.
-4. **README + CHANGELOG** — replace template with real package docs.
-5. **Broader tests** — remote log level, Wi-Fi-only sync, backoff under flaky network.
+1. **Broader tests** — remote log level, Wi-Fi-only sync, backoff under flaky network.
+2. **Crash follow-ups** — optional backup sink; restart-safe pending-crash strategy.
+3. **Batch follow-ups** — jittered backoff; persistent retry state across restarts.
+4. **Network follow-ups** — chunked streaming tests; platform timing calibration.
+
+## Recently completed
+
+- **README + CHANGELOG** — package docs and `0.0.1` release notes.
+- **Emergency dispatch fallback** — failed urgent webhooks persist to `scout_logger_emergency.enc` and drain before batch sync (`EmergencyDispatchQueue`).
 
 ## Key Files
 

@@ -24,5 +24,9 @@ Crash telemetry has the highest urgency. This pack makes crash capture safer and
 
 ## Remaining follow-up in this area
 
-- Add explicit fallback channel when emergency dispatch fails (optional backup sink).
+- Add optional backup sink when emergency dispatch fails (in addition to encrypted retry queue).
 - Add process restart-safe pending-crash persistence strategy for edge crash loops.
+
+## Update (emergency retry queue)
+
+- Failed `notifyEmergency` calls are persisted in `EmergencyDispatchQueue` and retried before batch sync.

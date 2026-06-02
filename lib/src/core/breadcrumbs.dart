@@ -18,6 +18,18 @@ class BreadcrumbStore {
     _queue.addLast(breadcrumb);
   }
 
+  String? currentRouteHint() {
+    for (final Breadcrumb breadcrumb in _queue.toList().reversed) {
+      if (breadcrumb.label.startsWith('NAV_')) {
+        final Object? route = breadcrumb.metadata['to'];
+        if (route is String && route.isNotEmpty) {
+          return route;
+        }
+      }
+    }
+    return null;
+  }
+
   List<Breadcrumb> deepCopy() {
     final String encoded = jsonEncode(_queue.map((b) => b.toJson()).toList());
     final List<dynamic> decoded = jsonDecode(encoded) as List<dynamic>;

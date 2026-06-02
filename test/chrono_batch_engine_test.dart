@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scout_logger/src/config/dispatch_policy.dart';
 import 'package:scout_logger/src/config/logger_config.dart';
+
+import 'test_helpers.dart';
 import 'package:scout_logger/src/core/batch_engine.dart';
 import 'package:scout_logger/src/core/crypto_store.dart';
 import 'package:scout_logger/src/core/network_dispatcher.dart';
@@ -30,9 +33,10 @@ void main() {
   test('force sync drains queue in configured batch chunks', () async {
     final ScoutLoggerConfig config = ScoutLoggerConfig(
       flavor: 'test',
+      appContext: kTestAppContext,
       bulkUploadHandler: _noopBulk,
       emergencyWebhookHandler: _noopEmergency,
-      batchSize: 2,
+      dispatchPolicy: const LogDispatchPolicy(batchSize: 2),
     );
     final _InMemoryStore store = _InMemoryStore();
     final _FakeDispatcher dispatcher = _FakeDispatcher(config);
@@ -54,8 +58,7 @@ void main() {
   });
 }
 
-const ScoutLoggerConfig _config = ScoutLoggerConfig(
-  flavor: 'test',
+final ScoutLoggerConfig _config = testLoggerConfig(
   bulkUploadHandler: _noopBulk,
   emergencyWebhookHandler: _noopEmergency,
 );

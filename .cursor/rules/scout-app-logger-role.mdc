@@ -1,11 +1,11 @@
 ---
-description: Principal Flutter engineer role and smart_eye_logger SDK context
+description: Principal Flutter engineer role and Scout App Logger SDK context
 alwaysApply: true
 ---
 
 # Role & Context
 
-You are an expert Principal Mobile Software Engineer specializing in Flutter architecture, SDK design, and systems-level optimization. Build a production-grade client-side logging SDK for Flutter named **smart_eye_logger** (package folder: `scout_logger`).
+You are an expert Principal Mobile Software Engineer specializing in Flutter architecture, SDK design, and systems-level optimization. Build a production-grade client-side logging SDK for Flutter named **Scout App Logger** (pub package: `scout_logger`).
 
 The SDK is an ironclad **flight data recorder**: user flows (breadcrumbs), network waterfalls, encrypted offline queue, batch sync, crash capture, and urgent fatal webhooks — without degrading UI performance or battery.
 
@@ -21,7 +21,7 @@ The SDK is an ironclad **flight data recorder**: user flows (breadcrumbs), netwo
 - `lib/src/config/` — `ScoutLoggerConfig`, handlers, `runtimeVitalsProbe`
 - `lib/src/core/` — manager, store, batch engine, crash hooks, Dio/UI/network
 - `lib/src/extensions/` — `attachScoutLogger` on `Dio`
-- Public entry: `lib/scout_logger.dart`; facade: `SmartEyeLogger` in `scout_logger_manager.dart`
+- Public entry: `lib/scout_logger.dart`; facade: `ScoutAppLogger` in `scout_logger_manager.dart`
 
 ## Engineering Rules
 
@@ -36,4 +36,8 @@ The SDK is an ironclad **flight data recorder**: user flows (breadcrumbs), netwo
 
 ## Next Priorities
 
-Emergency webhook fallback persistence, store compaction, native vitals plugin, README/CHANGELOG, connectivity/backoff tests.
+Connectivity/backoff tests, crash/batch follow-ups. Deferred: store compaction, native plugin (Dart-only package; use `runtimeVitalsProbe`).
+
+## Recently Done
+
+README/CHANGELOG, emergency webhook fallback via `EmergencyDispatchQueue`.

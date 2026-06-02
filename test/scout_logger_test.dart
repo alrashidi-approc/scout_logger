@@ -20,7 +20,7 @@ void main() {
     expect(json['level'], 'FATAL');
   });
 
-  test('exposes SmartEyeLogger facade', () {
-    expect(() => SmartEyeLogger.instance, throwsStateError);
+  test('exposes ScoutAppLogger facade', () {
+    expect(() => ScoutAppLogger.instance, throwsStateError);
   });
 }

@@ -33,6 +33,26 @@ void main() {
     await _cleanup(path);
   });
 
+  test('appends multiple inserts after file has lines', () async {
+    final String path = _tempPath('store_append');
+    final EncryptedLogStore store = EncryptedLogStore('secret', storagePath: path);
+    final LogEnvelope first = LogEnvelope(
+      id: '1',
+      flavor: 'test',
+      domain: Domain.internal,
+      category: LogCategory.logic,
+      level: LogLevel.info,
+      message: 'first',
+      timestamp: DateTime.now(),
+    );
+    await store.insert(first);
+    await store.insert(first.copyWith(id: '2', message: 'second'));
+    expect(await store.count(), 2);
+    final List<LogEnvelope> batch = await store.readBatch(maxItems: 10);
+    expect(batch.map((LogEnvelope e) => e.message).toList(), <String>['first', 'second']);
+    await _cleanup(path);
+  });
+
   test('skips corrupted records without breaking queue', () async {
     final String path = _tempPath('store_corrupt');
     final EncryptedLogStore store = EncryptedLogStore('secret', storagePath: path);

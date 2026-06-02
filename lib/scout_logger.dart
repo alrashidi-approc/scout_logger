@@ -1,4 +1,12 @@
+export 'src/config/blackbox_app_context.dart';
+export 'src/config/dispatch_policy.dart';
+export 'src/config/incident_sharing_policy.dart';
+export 'src/config/email_reporting_config.dart';
+export 'src/config/log_server_routing.dart';
 export 'src/config/logger_config.dart';
+export 'src/core/app_context_resolver.dart';
+export 'src/models/incident_report.dart';
+export 'src/reporting/incident_email_formatter.dart';
 export 'src/core/scout_logger_manager.dart';
 export 'src/core/smart_dio_interceptor.dart';
 export 'src/core/smart_ui_observer.dart';
