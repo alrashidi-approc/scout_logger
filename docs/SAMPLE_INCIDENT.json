@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "incidentId": "1739350123456789",
   "time": {
     "utc": "2026-06-02T14:22:11.123Z",
@@ -14,17 +14,58 @@
     "stackTrace": "DioException [bad response]: 503",
     "immediateDispatch": false
   },
+  "deployment": {
+    "flavor": "production",
+    "environment": "production",
+    "appName": "Company Shop",
+    "release": "com.company.shop@2.4.1+204100"
+  },
   "app": {
+    "name": "Company Shop",
     "flavor": "production",
     "version": "2.4.1",
     "buildNumber": "204100",
     "packageName": "com.company.shop",
-    "sdkVersion": "1.0.0",
+    "sdkVersion": "1.1.0",
     "platform": "android"
+  },
+  "session": {
+    "sessionId": "sess_20260602_abc",
+    "startedAt": "2026-06-02T14:15:00.000Z",
+    "incidentIndex": 3
+  },
+  "triage": {
+    "fingerprint": [
+      "category:NETWORK",
+      "message:API request failed",
+      "frame:DioException"
+    ],
+    "groupingKey": "8f3c2a1b9e4d7c6a5b0e1f2d3c4b5a6978e6d5c4b3a2918071625344352617089ab",
+    "tags": {
+      "feature": "checkout",
+      "tenant": "kw"
+    },
+    "contexts": {
+      "cart": {
+        "itemCount": 2,
+        "totalKwd": 24.5
+      }
+    },
+    "occurrence": {
+      "count": 1,
+      "sinceLastReport": 1,
+      "reportReason": "first",
+      "firstSeenAt": "2026-06-02T14:22:11.123Z",
+      "lastSeenAt": "2026-06-02T14:22:11.123Z"
+    }
   },
   "user": {
     "userId": "usr_8f2a91",
-    "sessionId": "sess_20260602_abc"
+    "sessionId": "sess_20260602_abc",
+    "metadata": {
+      "role": "customer",
+      "tenant": "kw"
+    }
   },
   "device": {
     "osVersion": "14",
@@ -35,11 +76,7 @@
     "batteryLevel": 0.42,
     "chargingState": "discharging",
     "thermalState": "nominal",
-    "platform": "android",
-    "androidSdkInt": 34,
-    "brand": "google",
-    "isPhysicalDevice": true,
-    "batteryState": "discharging"
+    "platform": "android"
   },
   "connectivity": {
     "types": ["wifi"],
@@ -50,16 +87,28 @@
     "userFlow": [
       {
         "label": "NAV_PUSH",
+        "time": {
+          "utc": "2026-06-02T14:21:50.000Z",
+          "local": "2026-06-02T17:21:50.000+03:00"
+        },
         "timestamp": "2026-06-02T14:21:50.000Z",
         "metadata": { "from": "/", "to": "/home" }
       },
       {
         "label": "NAV_PUSH",
+        "time": {
+          "utc": "2026-06-02T14:22:05.000Z",
+          "local": "2026-06-02T17:22:05.000+03:00"
+        },
         "timestamp": "2026-06-02T14:22:05.000Z",
         "metadata": { "from": "/home", "to": "/checkout" }
       },
       {
-        "label": "DEMO_TAP",
+        "label": "TAP_PAY",
+        "time": {
+          "utc": "2026-06-02T14:22:08.000Z",
+          "local": "2026-06-02T17:22:08.000+03:00"
+        },
         "timestamp": "2026-06-02T14:22:08.000Z",
         "metadata": { "screen": "checkout" }
       }
@@ -72,17 +121,15 @@
       "method": "POST",
       "statusCode": 503,
       "waterfallUs": {
-        "startedAt": 1739350120000000,
-        "firstByteAt": 1739350121200000,
         "ttfb": 1200000,
         "payloadDownload": 800000,
         "total": 2000000
       },
-      "networkWaterfall": [
-        { "phase": "ttfb", "durationUs": 1200000 },
-        { "phase": "payload_download", "durationUs": 800000 },
-        { "phase": "total", "durationUs": 2000000 }
-      ],
+      "waterfallSec": {
+        "ttfb": 1.2,
+        "payloadDownload": 0.8,
+        "total": 2.0
+      },
       "requestHeaders": { "X-Trace-ID": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" },
       "requestBody": { "orderId": "ord_991", "password": "[REDACTED]" },
       "responseBody": { "error": "service_unavailable" }
@@ -94,23 +141,13 @@
         "at": "2026-06-02T14:21:55.000Z",
         "path": "/api/v1/cart",
         "method": "GET",
-        "statusCode": 200,
-        "traceId": "trace-cart-1"
-      },
-      {
-        "message": "API request started",
-        "level": "debug",
-        "at": "2026-06-02T14:22:10.000Z",
-        "path": "/api/v1/payments/charge",
-        "method": "POST",
-        "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        "statusCode": 200
       }
     ]
   },
   "custom": {
     "tenant": "kw",
     "locale": "ar",
-    "featureFlags": { "newCheckout": true },
     "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "path": "/api/v1/payments/charge",
     "method": "POST",

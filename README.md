@@ -31,14 +31,18 @@ Requires Dart **≥ 3.10** · Flutter **≥ 1.17**
 | 3 | **Navigation** | Screen flow via `navigatorObserver` |
 | 4 | **Dio** | API logs, trace ID, PII scrub, timing, optional errors-only + status filters |
 | 5 | **Crashes** | Automatic fatal incidents → urgent upload |
-| 6 | **Manual logs** | Business events with `logger.log` |
+| 6 | **Manual logs** | `logger.error('…')` or full `logger.log(...)` |
 | 7 | **Dispatch** | Batch vs one-by-one upload |
 | 8 | **Routing** | Different backends per log category |
 | 9 | **Sharing policy** | Smaller JSON when full payload is not needed |
-| 10 | **Email** | Plain-text reports to your team |
+| 10 | **Email** | Short alert emails (not log dumps); dedupe by `groupingKey` |
 | 11 | **Remote level** | `updateLogLevelsRemote` from server |
+| 12 | **App identity** | `app.name` + `deployment.appName` — partition all data per app on backend |
+| 13 | **Triage** | `groupingKey`, tags, contexts, `deployment.release` (schema **1.2**) |
+| 14 | **Repeat issues** | Same error counted; rollup upload after cooldown (no spam) |
+| 15 | **Simple logs** | `ScoutAppLogger.error('…')` without full `log(...)` boilerplate |
 
-Details: [`docs/BLACKBOX.md`](docs/BLACKBOX.md) · Sample JSON: [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json) · **Backend guide:** [`docs/BACKEND_INGESTION.md`](docs/BACKEND_INGESTION.md)
+Details: [`docs/BLACKBOX.md`](docs/BLACKBOX.md) · **Sample incident (schema 1.2):** [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json) · **Backend guide:** [`docs/BACKEND_INGESTION.md`](docs/BACKEND_INGESTION.md)
 
 ---
 
@@ -50,6 +54,7 @@ Before shipping to **production** / **staging**:
 |---------------|-----|
 | Unique `encryptionKey` (≥ 16 chars) | Default key is **rejected** for `production` / `staging` flavors at `init` |
 | `runtimeVitalsProbe` for battery/charging | Dart-only SDK; hosts supply real vitals |
+| `appName` on init | Same label on every incident → one backend bucket per app |
 | `bindUser` after login | Incidents tied to `userId` / `sessionId` |
 | `dio.attachScoutLogger(logger)` | Network failures + `X-Trace-ID` for server correlation |
 | `networkLoggingPolicy` | Usually `errorsOnly` + ignore `401`/`403`/`404` |
@@ -60,6 +65,7 @@ Before shipping to **production** / **staging**:
 await ScoutAppLogger.init(
   ScoutLoggerConfig.blackbox(
     flavor: 'production',
+    appName: 'Your App', // → app.name & deployment.appName on every incident
     encryptionKey: const String.fromEnvironment('SCOUT_LOG_KEY'),
     runtimeVitalsProbe: yourVitalsProbe,
     networkLoggingPolicy: const NetworkLoggingPolicy(
@@ -68,16 +74,77 @@ await ScoutAppLogger.init(
     ),
     onBatchIncidents: yourBatchHandler,
     onUrgentIncident: yourUrgentHandler,
+    release: 'com.yourapp@2.4.1+204',
+    environment: 'production',
+    productInsightsPolicy: const ProductInsightsPolicy(
+      sampleRate: 1.0,
+      trackAppLifecycle: true,
+      occurrencePolicy: IncidentOccurrencePolicy(
+        rollupCooldown: Duration(minutes: 15),
+        suppressDuplicateUrgent: true,
+      ),
+    ),
+    // emailReporting: EmailReportingConfig.gmail(
+    //   dedupeByGroupingKey: true,
+    //   emailCooldown: Duration(hours: 1),
+    //   ...
+    // ),
   ),
 );
+ScoutAppLogger.setTag('feature', 'checkout');
+ScoutAppLogger.breadcrumb('TAP_PAY');
+
+// Simple logs (internal + logic by default)
+await ScoutAppLogger.error('Payment failed', stackTrace: stack.toString());
+await ScoutAppLogger.warn('Checkout slow');
+await ScoutAppLogger.info('Cart opened');
 ```
+
+Incidents use schema **1.2** with **`app.name`** (backend partition key), **`triage.groupingKey`** (same-issue dedupe), **`triage.occurrence`** (repeat counts), **`deployment.release`**, **`session`**, and full user flow. See [`docs/BACKEND_INGESTION.md`](docs/BACKEND_INGESTION.md) and [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json).
+
+---
+
+## App name (one backend bucket per app)
+
+Set once at init so batch + urgent handlers can route everything to the same store:
+
+| Field | Use on backend |
+|-------|----------------|
+| `app.name` | Primary partition key (human-readable, e.g. `Diyar Wallet`) |
+| `deployment.appName` | Same value — for pipelines that index `deployment` |
+| `app.packageName` | Bundle id (`com.company.shop`) |
+
+```dart
+ScoutLoggerConfig.blackbox(
+  appName: 'Diyar Wallet',
+  autoResolveAppInfo: true, // fills version/build/package; keeps your appName
+  // ...
+)
+```
+
+With `autoResolveAppInfo: true` and no `appName`, the SDK uses the platform display name from `PackageInfo`, then falls back to `packageName`.
+
+---
+
+## Repeat issues (no spam, still get counts)
+
+The same `groupingKey` within a session:
+
+1. **First** — full upload + optional email (`triage.occurrence.reportReason: "first"`).
+2. **Repeats** — counted locally, **not** uploaded/emailed.
+3. **After cooldown** (default 15 min) — one **rollup** with `occurrence.count` and `sinceLastReport`.
+
+Urgent webhooks for fatals fire **once per grouping key** unless you change `IncidentOccurrencePolicy.suppressDuplicateUrgent`.
 
 ---
 
 ## What you send to the backend
 
-- **Batch:** `onBatchIncidents` → `List<String>` (each item is one incident JSON).
-- **Urgent:** `onUrgentIncident` → one JSON string (crash / fatal / critical).
+- **Batch:** `onBatchIncidents` → `List<String>` (each item is one incident JSON, schema **1.2**).
+- **Urgent:** `onUrgentIncident` → one JSON string (first fatal per issue; rollups go batch).
+- **Partition:** filter/group by `app.name` (or `deployment.appName`).
+- **Same issue:** `triage.groupingKey` + `triage.occurrence.count`.
+- **Server correlation:** `network.triggering.traceId` = your `X-Trace-ID`.
 - Times: `time.utc` + `time.local` · API durations: `waterfallSec`.
 
 ---
@@ -100,7 +167,7 @@ The `example/` app uses **clean architecture** (`core/` bootstrap + network, `fe
 |------|---------|
 | [docs/BLACKBOX.md](docs/BLACKBOX.md) | Full parameter reference |
 | [docs/BACKEND_INGESTION.md](docs/BACKEND_INGESTION.md) | Backend / on-call field guide |
-| [docs/SAMPLE_INCIDENT.json](docs/SAMPLE_INCIDENT.json) | Example server payload |
+| [docs/SAMPLE_INCIDENT.json](docs/SAMPLE_INCIDENT.json) | Example incident JSON (schema 1.2) |
 | [docs/EMAIL_REPORTING_EXAMPLE.md](docs/EMAIL_REPORTING_EXAMPLE.md) | Gmail / SMTP setup |
 
 ---
@@ -192,6 +259,7 @@ class ScoutBootstrap {
     _logger = await ScoutAppLogger.init(
       ScoutLoggerConfig.blackbox(
         flavor: const String.fromEnvironment('FLAVOR', defaultValue: 'production'),
+        appName: 'Your App',
         autoResolveAppInfo: true,
         encryptionKey: const String.fromEnvironment('LOG_KEY'),
         minimumLevel: LogLevel.info,
@@ -205,6 +273,14 @@ class ScoutBootstrap {
         ),
         onBatchIncidents: incidentApi.postBatch,
         onUrgentIncident: incidentApi.postUrgent,
+        release: 'com.yourapp@1.0.0+1',
+        environment: 'production',
+        productInsightsPolicy: const ProductInsightsPolicy(
+          trackAppLifecycle: true,
+          occurrencePolicy: IncidentOccurrencePolicy(
+            rollupCooldown: Duration(minutes: 15),
+          ),
+        ),
         networkLoggingPolicy: const NetworkLoggingPolicy(
           scope: NetworkLogScope.errorsOnly,
           nonErrorStatusCodes: <int>{401, 403, 404},
@@ -462,8 +538,9 @@ After `ScoutBootstrap.init`, uncaught errors are logged as **FATAL** and sent to
 | `networkLoggingPolicy` set | Errors-only and/or ignore 401, 403, 404 as non-errors |
 | `navigatorObservers: [logger.navigatorObserver]` | User flow on errors |
 | `bindUser` after login | Incidents tied to user + metadata |
+| `appName` set | All incidents land in the right backend app bucket |
 | `onBatchIncidents` / `onUrgentIncident` implemented | Data reaches your servers |
-| Optional `emailReporting` | Team gets readable emails |
+| Optional `emailReporting` | Short alerts; deduped by `groupingKey` |
 
 ---
 

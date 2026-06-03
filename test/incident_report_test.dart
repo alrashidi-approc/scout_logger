@@ -42,6 +42,7 @@ void main() {
       appVersion: '2.0.0',
       buildNumber: '42',
       packageName: 'com.example.shop',
+      appName: 'Example Shop',
       userId: 'u-99',
       sessionId: 'sess-1',
       globalMetadata: <String, dynamic>{'tenant': 'kw'},
@@ -62,6 +63,8 @@ void main() {
     expect(report['incidentId'], 'inc-1');
     expect((report['time'] as Map)['utc'], isNotNull);
     expect(report['app'], containsPair('version', '2.0.0'));
+    expect(report['app'], containsPair('name', 'Example Shop'));
+    expect((report['deployment'] as Map)['appName'], 'Example Shop');
     expect(report['user'], containsPair('userId', 'u-99'));
     expect((report['network'] as Map)['triggering'], contains('waterfallSec'));
     expect(report['screen'], containsPair('currentRoute', '/checkout'));

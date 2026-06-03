@@ -77,33 +77,26 @@ class DemoRepository {
   Future<void> fillBatch() async {
     _hub.status('Enqueueing 6 INFO logs (batch size = 5) …');
     for (int i = 0; i < 6; i++) {
-      await _logger.log(
-        domain: Domain.internal,
-        category: LogCategory.logic,
-        level: LogLevel.info,
-        message: 'demo batch item $i',
-        metadata: <String, dynamic>{'index': i},
-      );
+    await _logger.info(
+      'demo batch item $i',
+      metadata: <String, dynamic>{'index': i},
+    );
     }
   }
 
   Future<void> logSimulatedError() async {
-    await _logger.log(
-      domain: Domain.internal,
-      category: LogCategory.logic,
-      level: LogLevel.error,
-      message: 'Simulated checkout failure',
+    _logger.setTag('feature', 'checkout');
+    _logger.setContext('order', <String, dynamic>{'step': 'payment'});
+    await _logger.error(
+      'Simulated checkout failure',
       metadata: <String, dynamic>{'step': 'payment'},
       stackTrace: StackTrace.current.toString(),
     );
   }
 
   Future<void> logSimulatedFatal() async {
-    await _logger.log(
-      domain: Domain.internal,
-      category: LogCategory.systemCrash,
-      level: LogLevel.fatal,
-      message: 'Simulated fatal — bypasses batch queue',
+    await _logger.fatal(
+      'Simulated fatal — bypasses batch queue',
       stackTrace: StackTrace.current.toString(),
     );
   }

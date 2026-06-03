@@ -38,10 +38,22 @@ void main() {
       },
     });
 
-    expect(body, contains('MOBILE INCIDENT REPORT'));
+    expect(body, contains('What happened'));
     expect(body, contains('Payment failed'));
-    expect(body, contains('User ID'));
     expect(body, contains('u1'));
-    expect(body, contains('Stack trace'));
+    expect(body, contains('Stack (truncated)'));
+  });
+
+  test('rollup subject shows occurrence multiplier', () {
+    final String subject = formatIncidentEmailSubject(<String, dynamic>{
+      'event': <String, dynamic>{'level': 'FATAL', 'message': 'Crash'},
+      'app': <String, dynamic>{'packageName': 'com.test'},
+      'triage': <String, dynamic>{
+        'occurrence': <String, dynamic>{'count': 12},
+      },
+    }, '[Alert]');
+
+    expect(subject, contains('×12'));
+    expect(subject, contains('Crash'));
   });
 }

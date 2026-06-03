@@ -17,15 +17,29 @@ class AppContextResolver {
           buildNumber: info.buildNumber,
           packageName: info.packageName,
         );
+    final String resolvedName = _resolveAppName(seed, info.appName);
     return seed.copyWith(
       appVersion: info.version,
       buildNumber: info.buildNumber,
       packageName: info.packageName,
+      appName: resolvedName,
       userId: userId ?? seed.userId,
       sessionId: sessionId ?? seed.sessionId,
       globalMetadata: globalMetadata == null
           ? seed.globalMetadata
           : <String, dynamic>{...seed.globalMetadata, ...globalMetadata},
     );
+  }
+
+  static String _resolveAppName(BlackboxAppContext seed, String platformAppName) {
+    final String? host = seed.appName?.trim();
+    if (host != null && host.isNotEmpty) {
+      return host;
+    }
+    final String trimmed = platformAppName.trim();
+    if (trimmed.isNotEmpty) {
+      return trimmed;
+    }
+    return seed.packageName;
   }
 }

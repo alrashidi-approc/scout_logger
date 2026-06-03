@@ -13,7 +13,7 @@ Return `true` from batch handler only after durable server-side accept. Failed b
 
 ## Schema
 
-- **Version field:** `schemaVersion` (current: `1.1`)
+- **Version field:** `schemaVersion` (current: `1.2`)
 - **SDK field:** `app.sdkVersion` (package version, e.g. `1.0.0`)
 - **Canonical sample:** [`SAMPLE_INCIDENT.json`](SAMPLE_INCIDENT.json)
 
@@ -28,8 +28,20 @@ Return `true` from batch handler only after durable server-side accept. Failed b
 | `event.category` | `NETWORK`, `SYSTEM_CRASH`, `LOGIC`, … |
 | `event.message` | Human-readable summary |
 | `user.userId` / `user.sessionId` | Correlate with your auth/session store |
+| `app.name` | **Partition key** — human-readable app label (same value as `deployment.appName`) |
+| `app.packageName` | Store / bundle id (e.g. `com.company.shop`) |
 | `app.flavor` | `production`, `staging`, `dev` |
+| `deployment.appName` | Duplicate of `app.name` for pipelines that index on `deployment` |
 | `network.triggering.traceId` | **Same value as `X-Trace-ID`** on the failing HTTP call |
+| `triage.groupingKey` | Stable SHA-256 for dedupe / “same issue” dashboards |
+| `triage.occurrence.count` | How many times this `groupingKey` fired this session (rollup reports total) |
+| `triage.occurrence.sinceLastReport` | New hits since the previous upload for this key |
+| `triage.occurrence.reportReason` | `first` \| `rollup` — use to avoid treating rollups as new issues |
+| `triage.fingerprint` | Human-readable components (category, message, top frame, tags) |
+| `triage.tags` / `triage.contexts` | Host-defined scope (`setTag`, `setContext`) |
+| `deployment.release` | e.g. `com.app@2.4.1+204` — regression by build |
+| `deployment.environment` | e.g. `production`, `staging` |
+| `session.incidentIndex` | Nth incident in this app session |
 | `network.triggering.statusCode` | HTTP status when category is `NETWORK` |
 | `screen.userFlow` | Ordered UI breadcrumbs before the incident |
 | `device.*` | OS, model, RAM, battery (see below) |

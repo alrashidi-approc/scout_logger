@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:meta/meta.dart';
 
 import '../config/blackbox_app_context.dart';
 import '../config/network_logging_policy.dart';
 import '../config/logger_config.dart';
+import '../config/product_insights_policy.dart';
 import '../config/production_config_validator.dart';
 import '../models/incident_report.dart';
 import '../models/log_models.dart';
@@ -19,6 +21,9 @@ import 'app_context_resolver.dart';
 import '../reporting/email_incident_reporter.dart';
 import 'emergency_dispatch_queue.dart';
 import 'network_dispatcher.dart';
+import 'incident_scope.dart';
+import 'issue_occurrence_tracker.dart';
+import 'scout_lifecycle_binding.dart';
 import 'smart_ui_observer.dart';
 
 class ScoutLogger {
@@ -32,6 +37,7 @@ class ScoutLogger {
     required NetworkDispatcher dispatcher,
     required EmergencyDispatchQueue emergencyQueue,
     EmailIncidentReporter? emailReporter,
+    ScoutLifecycleBinding? lifecycleBinding,
   })  : _config = config,
         _batchEngine = batchEngine,
         _breadcrumbStore = breadcrumbStore,
@@ -39,8 +45,10 @@ class ScoutLogger {
         _observer = observer,
         _dispatcher = dispatcher,
         _emergencyQueue = emergencyQueue,
-        _emailReporter = emailReporter {
+        _emailReporter = emailReporter,
+        _lifecycleBinding = lifecycleBinding {
     _crashHooks = CrashHooks.fromLogger(this);
+    _sessionStartedAt = DateTime.now();
   }
 
   static ScoutLogger? _instance;
@@ -74,6 +82,9 @@ class ScoutLogger {
       emergencyStoragePath: config.emergencyStoragePath,
       connectivityChecker: config.connectivityChecker,
       networkLoggingPolicy: config.networkLoggingPolicy,
+      release: config.release,
+      environment: config.environment,
+      productInsightsPolicy: config.productInsightsPolicy,
     );
     final BreadcrumbStore breadcrumbs =
         BreadcrumbStore(maxEntries: resolved.breadcrumbLimit);
@@ -99,6 +110,10 @@ class ScoutLogger {
       emergencyQueue: emergencyQueue,
     );
     final SmartUIObserver observer = SmartUIObserver(breadcrumbs);
+    ScoutLifecycleBinding? lifecycleBinding;
+    if (resolved.productInsightsPolicy.trackAppLifecycle) {
+      lifecycleBinding = ScoutLifecycleBinding(breadcrumbs)..install();
+    }
     final ScoutLogger logger = ScoutLogger._(
       config: resolved,
       batchEngine: batch,
@@ -111,6 +126,7 @@ class ScoutLogger {
       dispatcher: dispatcher,
       emergencyQueue: emergencyQueue,
       emailReporter: emailReporter,
+      lifecycleBinding: lifecycleBinding,
     );
     logger._crashHooks.install();
     logger._batchEngine.start();
@@ -128,6 +144,7 @@ class ScoutLogger {
 
   @visibleForTesting
   static void resetForTesting() {
+    _instance?._lifecycleBinding?.dispose();
     _instance?._batchEngine.dispose();
     _instance = null;
   }
@@ -140,10 +157,18 @@ class ScoutLogger {
   final NetworkDispatcher _dispatcher;
   final EmergencyDispatchQueue _emergencyQueue;
   final EmailIncidentReporter? _emailReporter;
+  final ScoutLifecycleBinding? _lifecycleBinding;
   late final CrashHooks _crashHooks;
   late LogLevel _activeMinimumLevel = _config.minimumLevel;
   late BlackboxAppContext _appContext = _config.appContext;
   final RecentNetworkBuffer _recentNetwork = RecentNetworkBuffer();
+  final IncidentScope _scope = IncidentScope();
+  late final DateTime _sessionStartedAt;
+  int _sessionIncidentCount = 0;
+  final Random _sampleRandom = Random();
+  late final IssueOccurrenceTracker _occurrenceTracker = IssueOccurrenceTracker(
+    policy: _config.productInsightsPolicy.occurrencePolicy,
+  );
 
   /// Observer to plug into `MaterialApp.navigatorObservers`.
   SmartUIObserver get navigatorObserver => _observer;
@@ -168,6 +193,24 @@ class ScoutLogger {
   /// Updates session id without changing user (e.g. app resume).
   void setSessionId(String sessionId) {
     _appContext = _appContext.copyWith(sessionId: sessionId);
+  }
+
+  /// Tags indexed by backend for grouping (e.g. feature, team, screen).
+  void setTag(String key, String value) => _scope.setTag(key, value);
+
+  void removeTag(String key) => _scope.removeTag(key);
+
+  /// Named context blocks merged into incident `triage.contexts`.
+  void setContext(String name, Map<String, dynamic> data) =>
+      _scope.setContext(name, data);
+
+  void removeContext(String name) => _scope.removeContext(name);
+
+  void clearScope() => _scope.clear();
+
+  /// Records a product breadcrumb (buttons, flows, business steps).
+  void breadcrumb(String label, {Map<String, dynamic>? metadata}) {
+    _observer.addManualBreadcrumb(label, metadata: metadata);
   }
 
   /// Merges persistent metadata into every incident report `custom` section.
@@ -205,10 +248,14 @@ class ScoutLogger {
     if (_severity(level) < _severity(_activeMinimumLevel)) {
       return;
     }
-    final bool buildIncident = level == LogLevel.error ||
-        level == LogLevel.fatal ||
-        level == LogLevel.critical ||
-        (level == LogLevel.warn && _config.buildFullIncidentOnWarnOrHigher);
+    final bool buildIncident = _shouldBuildIncident(level);
+    if (buildIncident && !_canRecordIncident(level)) {
+      return;
+    }
+    if (buildIncident && !_shouldSample(level)) {
+      return;
+    }
+
     DeviceVitalsSnapshot? vitals;
     if (buildIncident) {
       vitals = await _deviceVitalsCollector.collectAtCrashTime();
@@ -227,7 +274,9 @@ class ScoutLogger {
         immediateDispatch || level == LogLevel.fatal || level == LogLevel.critical;
 
     Map<String, dynamic>? incidentReport;
+    IncidentOccurrenceDecision? occurrenceDecision;
     if (buildIncident) {
+      _sessionIncidentCount++;
       incidentReport = buildIncidentReport(
         envelope: LogEnvelope(
           id: id,
@@ -249,8 +298,38 @@ class ScoutLogger {
         recentNetwork: _recentNetwork.snapshot(),
         currentRoute: _breadcrumbStore.currentRouteHint(),
         sharingPolicy: _config.incidentSharingPolicy,
+        tags: _scope.snapshotTags(),
+        contexts: _scope.snapshotContexts(),
+        release: _config.release,
+        environment: _config.environment,
+        sessionStartedAt: _sessionStartedAt,
+        sessionIncidentIndex: _sessionIncidentCount,
       );
+      final String groupingKey =
+          (incidentReport['triage'] as Map<String, dynamic>?)?['groupingKey']
+              as String? ??
+          '';
+      occurrenceDecision = _occurrenceTracker.evaluate(
+        groupingKey: groupingKey.isEmpty ? id : groupingKey,
+        now: at,
+      );
+      if (!occurrenceDecision!.shouldUpload) {
+        return;
+      }
+      incidentReport = _attachOccurrence(incidentReport, occurrenceDecision!);
+      incidentReport = _applyBeforeSend(incidentReport);
+      if (incidentReport == null) {
+        return;
+      }
     }
+
+    final bool dispatchNow = !buildIncident
+        ? urgent
+        : urgent &&
+            _occurrenceTracker.shouldSendUrgent(
+              groupingKey: _groupingKeyFromReport(incidentReport) ?? id,
+              decision: occurrenceDecision!,
+            );
 
     final LogEnvelope envelope = LogEnvelope(
       id: id,
@@ -265,7 +344,7 @@ class ScoutLogger {
       breadcrumbs: flow,
       deviceVitals: vitals,
       incidentReport: incidentReport,
-      immediateDispatch: urgent,
+      immediateDispatch: dispatchNow,
     );
 
     if (category == LogCategory.network) {
@@ -305,6 +384,70 @@ class ScoutLogger {
       case LogLevel.critical:
         return 5;
     }
+  }
+
+  bool _shouldBuildIncident(LogLevel level) =>
+      level == LogLevel.error ||
+      level == LogLevel.fatal ||
+      level == LogLevel.critical ||
+      (level == LogLevel.warn && _config.buildFullIncidentOnWarnOrHigher);
+
+  bool _canRecordIncident(LogLevel level) {
+    if (level == LogLevel.fatal || level == LogLevel.critical) {
+      return true;
+    }
+    return _sessionIncidentCount < _config.productInsightsPolicy.maxIncidentsPerSession;
+  }
+
+  bool _shouldSample(LogLevel level) {
+    if (level == LogLevel.fatal || level == LogLevel.critical) {
+      return true;
+    }
+    final double rate = _config.productInsightsPolicy.sampleRate;
+    if (rate >= 1.0) {
+      return true;
+    }
+    if (rate <= 0) {
+      return false;
+    }
+    return _sampleRandom.nextDouble() < rate;
+  }
+
+  Map<String, dynamic>? _applyBeforeSend(Map<String, dynamic> incident) {
+    final BeforeIncidentSend? hook = _config.productInsightsPolicy.beforeIncidentSend;
+    if (hook == null) {
+      return incident;
+    }
+    return hook(incident);
+  }
+
+  String? _groupingKeyFromReport(Map<String, dynamic>? report) {
+    if (report == null) {
+      return null;
+    }
+    return (report['triage'] as Map<String, dynamic>?)?['groupingKey'] as String?;
+  }
+
+  Map<String, dynamic> _attachOccurrence(
+    Map<String, dynamic> incident,
+    IncidentOccurrenceDecision decision,
+  ) {
+    final Map<String, dynamic> triage = Map<String, dynamic>.from(
+      incident['triage'] as Map<String, dynamic>? ?? <String, dynamic>{},
+    );
+    final String reportReason = switch (decision.reason) {
+      IncidentDispatchReason.first => 'first',
+      IncidentDispatchReason.rollup => 'rollup',
+      IncidentDispatchReason.suppressed => 'suppressed',
+    };
+    triage['occurrence'] = <String, dynamic>{
+      'count': decision.totalCount,
+      'sinceLastReport': decision.pendingSinceLastReport,
+      'reportReason': reportReason,
+      'firstSeenAt': decision.firstSeenAt?.toUtc().toIso8601String(),
+      'lastSeenAt': decision.lastSeenAt?.toUtc().toIso8601String(),
+    };
+    return <String, dynamic>{...incident, 'triage': triage};
   }
 }
 
@@ -361,6 +504,15 @@ class ScoutAppLogger {
         stackTrace: stackTrace,
         immediateDispatch: immediateDispatch,
       );
+
+  static void setTag(String key, String value) =>
+      ScoutLogger.instance.setTag(key, value);
+
+  static void setContext(String name, Map<String, dynamic> data) =>
+      ScoutLogger.instance.setContext(name, data);
+
+  static void breadcrumb(String label, {Map<String, dynamic>? metadata}) =>
+      ScoutLogger.instance.breadcrumb(label, metadata: metadata);
 }
 
 @Deprecated('Use ScoutAppLogger instead.')

@@ -9,6 +9,7 @@ import 'email_reporting_config.dart';
 import 'incident_sharing_policy.dart';
 import 'log_server_routing.dart';
 import 'network_logging_policy.dart';
+import 'product_insights_policy.dart';
 import 'upload_handlers.dart';
 
 export 'upload_handlers.dart';
@@ -34,6 +35,9 @@ class ScoutLoggerConfig {
     this.emergencyStoragePath,
     @visibleForTesting this.connectivityChecker,
     this.networkLoggingPolicy = NetworkLoggingPolicy.defaults,
+    this.release,
+    this.environment,
+    this.productInsightsPolicy = const ProductInsightsPolicy(),
   });
 
   final String flavor;
@@ -55,6 +59,9 @@ class ScoutLoggerConfig {
   final String? emergencyStoragePath;
   final ConnectivityChecker? connectivityChecker;
   final NetworkLoggingPolicy networkLoggingPolicy;
+  final String? release;
+  final String? environment;
+  final ProductInsightsPolicy productInsightsPolicy;
 
   int get batchSize => dispatchPolicy.batchSize;
   Duration get batchWindow => dispatchPolicy.batchWindow;
@@ -63,6 +70,8 @@ class ScoutLoggerConfig {
   factory ScoutLoggerConfig.blackbox({
     required String flavor,
     BlackboxAppContext? appContext,
+    /// Backend partition label (e.g. `Diyar Wallet`). Overrides [BlackboxAppContext.appName].
+    String? appName,
     bool autoResolveAppInfo = true,
     required BlackboxBulkUploadHandler onBatchIncidents,
     required BlackboxEmergencyHandler onUrgentIncident,
@@ -78,6 +87,9 @@ class ScoutLoggerConfig {
     bool buildFullIncidentOnWarnOrHigher = true,
     IncidentSharingPolicy incidentSharingPolicy = const IncidentSharingPolicy(),
     NetworkLoggingPolicy networkLoggingPolicy = NetworkLoggingPolicy.defaults,
+    String? release,
+    String? environment,
+    ProductInsightsPolicy productInsightsPolicy = const ProductInsightsPolicy(),
   }) {
     BulkUploadHandler bulk = (List<LogEnvelope> logs) =>
         onBatchIncidents(logs.map((LogEnvelope e) => e.toIncidentJson()).toList());
@@ -121,14 +133,14 @@ class ScoutLoggerConfig {
       };
     }
 
+    final BlackboxAppContext resolvedContext = _resolveBlackboxAppContext(
+      appContext: appContext,
+      appName: appName,
+    );
+
     return ScoutLoggerConfig(
       flavor: flavor,
-      appContext: appContext ??
-          const BlackboxAppContext(
-            appVersion: '0.0.0',
-            buildNumber: '0',
-            packageName: 'unknown',
-          ),
+      appContext: resolvedContext,
       autoResolveAppInfo: autoResolveAppInfo,
       encryptionKey: encryptionKey,
       dispatchPolicy: policy,
@@ -141,9 +153,29 @@ class ScoutLoggerConfig {
       buildFullIncidentOnWarnOrHigher: buildFullIncidentOnWarnOrHigher,
       incidentSharingPolicy: incidentSharingPolicy,
       networkLoggingPolicy: networkLoggingPolicy,
+      release: release,
+      environment: environment,
+      productInsightsPolicy: productInsightsPolicy,
       bulkUploadHandler: bulk,
       emergencyWebhookHandler: (LogEnvelope log) => onUrgentIncident(log.toIncidentJson()),
     );
+  }
+
+  static BlackboxAppContext _resolveBlackboxAppContext({
+    BlackboxAppContext? appContext,
+    String? appName,
+  }) {
+    final BlackboxAppContext base = appContext ??
+        const BlackboxAppContext(
+          appVersion: '0.0.0',
+          buildNumber: '0',
+          packageName: 'unknown',
+        );
+    final String? trimmed = appName?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return base;
+    }
+    return base.copyWith(appName: trimmed);
   }
 }
 

@@ -1,126 +1,115 @@
-/// Plain-text incident report for email (readable by non-engineers).
-String formatIncidentEmailBody(Map<String, dynamic> incident) {
+/// Plain-text incident alert for email (short, not a log dump).
+String formatIncidentEmailBody(
+  Map<String, dynamic> incident, {
+  int maxBreadcrumbs = 5,
+  int maxStackTraceLines = 12,
+}) {
   final Map<String, dynamic> event =
       incident['event'] as Map<String, dynamic>? ?? <String, dynamic>{};
   final Map<String, dynamic> app =
       incident['app'] as Map<String, dynamic>? ?? <String, dynamic>{};
   final Map<String, dynamic> user =
       incident['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
-  final Map<String, dynamic>? device = incident['device'] as Map<String, dynamic>?;
-  final Map<String, dynamic>? connectivity =
-      incident['connectivity'] as Map<String, dynamic>?;
+  final Map<String, dynamic> triage =
+      incident['triage'] as Map<String, dynamic>? ?? <String, dynamic>{};
+  final Map<String, dynamic>? occurrence =
+      triage['occurrence'] as Map<String, dynamic>?;
   final Map<String, dynamic> screen =
       incident['screen'] as Map<String, dynamic>? ?? <String, dynamic>{};
   final Map<String, dynamic> network =
       incident['network'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
-  final StringBuffer body = StringBuffer()
-    ..writeln('MOBILE INCIDENT REPORT')
-    ..writeln('========================')
-    ..writeln()
-    ..writeln('Summary')
-    ..writeln('--------')
-    ..writeln('Incident ID : ${incident['incidentId']}')
-    ..writeln('Time (UTC)  : ${_timeUtc(incident)}')
-    ..writeln('Time (local): ${_timeLocal(incident)}')
-    ..writeln('Severity    : ${event['level']}')
-    ..writeln('Category    : ${event['category']}')
-    ..writeln('Message     : ${event['message']}')
-    ..writeln()
-    ..writeln('Application')
-    ..writeln('-------------')
-    ..writeln('Package     : ${app['packageName']}')
-    ..writeln('Version     : ${app['version']} (${app['buildNumber']})')
-    ..writeln('Flavor      : ${app['flavor']}')
-    ..writeln('SDK         : ${app['sdkVersion']}')
-    ..writeln('Platform    : ${app['platform']}')
-    ..writeln()
-    ..writeln('User')
-    ..writeln('----')
-    ..writeln('User ID     : ${user['userId'] ?? '—'}')
-    ..writeln('Session ID  : ${user['sessionId'] ?? '—'}');
-  final Map<String, dynamic>? userMeta = user['metadata'] as Map<String, dynamic>?;
-  if (userMeta != null && userMeta.isNotEmpty) {
-    body.writeln('User meta   : $userMeta');
-  }
-  body.writeln();
+  final int count = occurrence?['count'] as int? ?? 1;
+  final bool isRollup = occurrence?['reportReason'] == 'rollup';
+  final int sinceLast = occurrence?['sinceLastReport'] as int? ?? count;
 
-  if (device != null) {
-    body
-      ..writeln('Device')
-      ..writeln('------')
-      ..writeln('Model       : ${device['manufacturer']} ${device['deviceModel']}')
-      ..writeln('OS          : ${device['osVersion']}')
-      ..writeln('RAM used    : ${device['ramUsedBytes']} bytes')
-      ..writeln('RAM free    : ${device['ramFreeBytes'] ?? '—'}')
-      ..writeln('Battery     : ${device['batteryLevel'] ?? '—'} (${device['chargingState'] ?? device['batteryState'] ?? '—'})')
-      ..writeln('Thermal     : ${device['thermalState'] ?? '—'}')
-      ..writeln();
-  }
-
-  if (connectivity != null) {
-    body
-      ..writeln('Connectivity')
-      ..writeln('--------------')
-      ..writeln('Online      : ${connectivity['isOnline']}')
-      ..writeln('Types       : ${(connectivity['types'] as List<dynamic>?)?.join(', ') ?? '—'}')
-      ..writeln();
+  final StringBuffer body = StringBuffer();
+  if (count > 1) {
+    body.writeln(
+      isRollup
+          ? 'REPEAT ALERT — this issue occurred $sinceLast more time(s) ($count total this session).'
+          : 'NEW ISSUE — first occurrence (will group repeats by fingerprint).',
+    );
+    body.writeln();
   }
 
   body
-    ..writeln('Screen / user flow')
-    ..writeln('------------------')
-    ..writeln('Current     : ${screen['currentRoute'] ?? '—'}');
+    ..writeln('What happened')
+    ..writeln('--------------')
+    ..writeln('${event['level']} · ${event['category']}')
+    ..writeln(event['message'])
+    ..writeln()
+    ..writeln('Where')
+    ..writeln('-----')
+    ..writeln('App     : ${app['name'] ?? app['packageName']} ${app['version']} (${app['flavor']})')
+    ..writeln('Screen  : ${screen['currentRoute'] ?? '—'}')
+    ..writeln('User    : ${user['userId'] ?? '—'}')
+    ..writeln('Time    : ${_timeLocal(incident)} (${_timeUtc(incident)} UTC)');
 
-  final List<dynamic> flow = screen['userFlow'] as List<dynamic>? ?? <dynamic>[];
-  for (final dynamic step in flow) {
-    if (step is Map) {
-      body.writeln('  • ${step['label']} → ${step['metadata']?['to'] ?? ''} @ ${step['timestamp']}');
-    }
+  final String? groupingKey = triage['groupingKey'] as String?;
+  if (groupingKey != null) {
+    body.writeln('Group   : $groupingKey');
+  }
+  if (occurrence != null) {
+    body
+      ..writeln('Count   : $count')
+      ..writeln('First   : ${occurrence['firstSeenAt'] ?? '—'}')
+      ..writeln('Last    : ${occurrence['lastSeenAt'] ?? '—'}');
   }
   body.writeln();
 
-  final Map<String, dynamic>? triggering =
-      network['triggering'] as Map<String, dynamic>?;
-  if (triggering != null && triggering.isNotEmpty) {
-    body
-      ..writeln('API (triggering request)')
-      ..writeln('------------------------')
-      ..writeln('Method      : ${triggering['method']}')
-      ..writeln('Path        : ${triggering['path']}')
-      ..writeln('Status      : ${triggering['statusCode']}')
-      ..writeln('Trace ID    : ${triggering['traceId']}')
-      ..writeln('Waterfall   : ${triggering['waterfallSec'] ?? triggering['waterfallUs']}')
-      ..writeln();
-  }
-
-  final List<dynamic> recent = network['recent'] as List<dynamic>? ?? <dynamic>[];
-  if (recent.isNotEmpty) {
-    body.writeln('Recent API calls');
-    body.writeln('----------------');
-    for (final dynamic item in recent) {
-      if (item is Map) {
-        body.writeln('  • ${item['method']} ${item['path']} (${item['statusCode'] ?? item['level']})');
+  final List<dynamic> flow = screen['userFlow'] as List<dynamic>? ?? <dynamic>[];
+  if (flow.isNotEmpty) {
+    body.writeln('Last steps (max $maxBreadcrumbs)');
+    body.writeln('---------------------------');
+    final int start = flow.length > maxBreadcrumbs ? flow.length - maxBreadcrumbs : 0;
+    for (int i = start; i < flow.length; i++) {
+      final dynamic step = flow[i];
+      if (step is Map) {
+        body.writeln('  • ${step['label']}');
       }
     }
     body.writeln();
   }
 
-  final String? stack = event['stackTrace'] as String?;
-  if (stack != null && stack.isNotEmpty) {
+  final Map<String, dynamic>? triggering =
+      network['triggering'] as Map<String, dynamic>?;
+  if (triggering != null && triggering.isNotEmpty) {
     body
-      ..writeln('Stack trace')
-      ..writeln('-----------')
-      ..writeln(stack)
+      ..writeln('API')
+      ..writeln('---')
+      ..writeln(
+        '${triggering['method']} ${triggering['path']} → ${triggering['statusCode']}',
+      )
+      ..writeln('Trace: ${triggering['traceId'] ?? '—'}')
       ..writeln();
   }
 
-  body
-    ..writeln('—')
-    ..writeln(
-      'Generated by Scout App Logger (scout_logger). JSON incident attached in backend ingest.',
-    );
+  final String? stack = event['stackTrace'] as String?;
+  if (stack != null && stack.isNotEmpty && !isRollup) {
+    body
+      ..writeln('Stack (truncated)')
+      ..writeln('-----------------')
+      ..writeln(_truncateStack(stack, maxStackTraceLines))
+      ..writeln();
+  } else if (isRollup) {
+    body.writeln('Stack trace omitted on repeat alert — see first report or backend.');
+    body.writeln();
+  }
+
+  body.writeln('Incident ID: ${incident['incidentId']}');
+  body.writeln('— Scout App Logger');
   return body.toString();
+}
+
+String _truncateStack(String stack, int maxLines) {
+  final List<String> lines = stack.split('\n');
+  if (lines.length <= maxLines) {
+    return stack;
+  }
+  final List<String> head = lines.take(maxLines).toList();
+  head.add('… (${lines.length - maxLines} more lines)');
+  return head.join('\n');
 }
 
 String _timeUtc(Map<String, dynamic> incident) {
@@ -141,5 +130,16 @@ String formatIncidentEmailSubject(
       incident['event'] as Map<String, dynamic>? ?? <String, dynamic>{};
   final Map<String, dynamic> app =
       incident['app'] as Map<String, dynamic>? ?? <String, dynamic>{};
-  return '$prefix ${event['level']} · ${app['packageName']} · ${event['message']}';
+  final Map<String, dynamic> triage =
+      incident['triage'] as Map<String, dynamic>? ?? <String, dynamic>{};
+  final Map<String, dynamic>? occurrence =
+      triage['occurrence'] as Map<String, dynamic>?;
+  final int count = occurrence?['count'] as int? ?? 1;
+  final String level = '${event['level']}';
+  final String message = '${event['message']}';
+  final String pkg = '${app['name'] ?? app['packageName']}';
+  if (count > 1) {
+    return '$prefix ×$count $level · $pkg · $message';
+  }
+  return '$prefix $level · $pkg · $message';
 }
