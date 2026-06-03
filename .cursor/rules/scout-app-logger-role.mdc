@@ -32,12 +32,12 @@ The SDK is an ironclad **flight data recorder**: user flows (breadcrumbs), netwo
 
 ## Implemented Feature Packs (see docs)
 
-01 encrypted persistence · 02 crash hardening · 03 batch resiliency · 04 network waterfall tests · 05 vitals runtime probe
+01 encrypted persistence · 02 crash hardening · 03 batch resiliency · 04 network waterfall tests · 05 vitals runtime probe · 06 dispatch/level tests
 
 ## Next Priorities
 
-Connectivity/backoff tests, crash/batch follow-ups. Deferred: store compaction, native plugin (Dart-only package; use `runtimeVitalsProbe`).
+Crash/batch follow-ups (backup sink, jittered backoff, persistent retry). Deferred: store compaction, native plugin (Dart-only package; use `runtimeVitalsProbe`).
 
 ## Recently Done
 
-README/CHANGELOG, emergency webhook fallback via `EmergencyDispatchQueue`.
+Pack 06: Wi‑Fi-only, backoff, remote log level tests. Emergency webhook fallback via `EmergencyDispatchQueue`.

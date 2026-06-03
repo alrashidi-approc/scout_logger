@@ -29,7 +29,7 @@ Requires Dart **≥ 3.10** · Flutter **≥ 1.17**
 | 1 | **Init** | Crash hooks, encrypted queue, upload callbacks |
 | 2 | **User** | `bindUser` + optional metadata (tenant, role, …) |
 | 3 | **Navigation** | Screen flow via `navigatorObserver` |
-| 4 | **Dio** | API logs, trace ID, PII scrub, timing |
+| 4 | **Dio** | API logs, trace ID, PII scrub, timing, optional errors-only + status filters |
 | 5 | **Crashes** | Automatic fatal incidents → urgent upload |
 | 6 | **Manual logs** | Business events with `logger.log` |
 | 7 | **Dispatch** | Batch vs one-by-one upload |
@@ -38,7 +38,39 @@ Requires Dart **≥ 3.10** · Flutter **≥ 1.17**
 | 10 | **Email** | Plain-text reports to your team |
 | 11 | **Remote level** | `updateLogLevelsRemote` from server |
 
-Details: [`docs/BLACKBOX.md`](docs/BLACKBOX.md) · Sample JSON: [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json)
+Details: [`docs/BLACKBOX.md`](docs/BLACKBOX.md) · Sample JSON: [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json) · **Backend guide:** [`docs/BACKEND_INGESTION.md`](docs/BACKEND_INGESTION.md)
+
+---
+
+## Production checklist
+
+Before shipping to **production** / **staging**:
+
+| Requirement | Why |
+|---------------|-----|
+| Unique `encryptionKey` (≥ 16 chars) | Default key is **rejected** for `production` / `staging` flavors at `init` |
+| `runtimeVitalsProbe` for battery/charging | Dart-only SDK; hosts supply real vitals |
+| `bindUser` after login | Incidents tied to `userId` / `sessionId` |
+| `dio.attachScoutLogger(logger)` | Network failures + `X-Trace-ID` for server correlation |
+| `networkLoggingPolicy` | Usually `errorsOnly` + ignore `401`/`403`/`404` |
+| Handlers return `true` only after server ACK | Batch retry + offline queue depend on this |
+| Urgent handler must not throw on success | Failures go to encrypted urgent queue |
+
+```dart
+await ScoutAppLogger.init(
+  ScoutLoggerConfig.blackbox(
+    flavor: 'production',
+    encryptionKey: const String.fromEnvironment('SCOUT_LOG_KEY'),
+    runtimeVitalsProbe: yourVitalsProbe,
+    networkLoggingPolicy: const NetworkLoggingPolicy(
+      scope: NetworkLogScope.errorsOnly,
+      nonErrorStatusCodes: <int>{401, 403, 404},
+    ),
+    onBatchIncidents: yourBatchHandler,
+    onUrgentIncident: yourUrgentHandler,
+  ),
+);
+```
 
 ---
 
@@ -58,6 +90,8 @@ flutter pub get
 flutter run
 ```
 
+The `example/` app uses **clean architecture** (`core/` bootstrap + network, `features/demo/` repository + UI). See [example/README.md](example/README.md).
+
 ---
 
 ## Docs
@@ -65,6 +99,7 @@ flutter run
 | File | Content |
 |------|---------|
 | [docs/BLACKBOX.md](docs/BLACKBOX.md) | Full parameter reference |
+| [docs/BACKEND_INGESTION.md](docs/BACKEND_INGESTION.md) | Backend / on-call field guide |
 | [docs/SAMPLE_INCIDENT.json](docs/SAMPLE_INCIDENT.json) | Example server payload |
 | [docs/EMAIL_REPORTING_EXAMPLE.md](docs/EMAIL_REPORTING_EXAMPLE.md) | Gmail / SMTP setup |
 
@@ -170,6 +205,10 @@ class ScoutBootstrap {
         ),
         onBatchIncidents: incidentApi.postBatch,
         onUrgentIncident: incidentApi.postUrgent,
+        networkLoggingPolicy: const NetworkLoggingPolicy(
+          scope: NetworkLogScope.errorsOnly,
+          nonErrorStatusCodes: <int>{401, 403, 404},
+        ),
         runtimeVitalsProbe: () async => {
           'thermalState': 'nominal',
         },
@@ -219,6 +258,26 @@ class ApiClient {
   }
 }
 ```
+
+#### Network logging scope (errors vs everything)
+
+Set once on `ScoutLoggerConfig.networkLoggingPolicy`:
+
+```dart
+networkLoggingPolicy: const NetworkLoggingPolicy(
+  // Log only real failures — not every 200 or 401
+  scope: NetworkLogScope.errorsOnly,
+  // HTTP codes your app treats as expected (no error log)
+  nonErrorStatusCodes: <int>{401, 403, 404},
+),
+```
+
+| `NetworkLogScope` | Behavior |
+|-------------------|----------|
+| `all` (default) | Request start, success responses, and failures |
+| `errorsOnly` | Failures only (still honors `nonErrorStatusCodes`) |
+
+`401` is in the default ignore list so unauthorized responses are not logged as `API request failed`. Use **`errorsOnly`** if you also want to skip request/success logs for those calls.
 
 ---
 
@@ -399,7 +458,8 @@ After `ScoutBootstrap.init`, uncaught errors are logged as **FATAL** and sent to
 | Step | Done when |
 |------|-----------|
 | `ScoutBootstrap.init` in `main` before `runApp` | SDK + crash hooks live |
-| `dio.attachScoutLogger(logger)` | API calls appear in incidents |
+| `dio.attachScoutLogger(logger)` | API calls appear in incidents (per `networkLoggingPolicy`) |
+| `networkLoggingPolicy` set | Errors-only and/or ignore 401, 403, 404 as non-errors |
 | `navigatorObservers: [logger.navigatorObserver]` | User flow on errors |
 | `bindUser` after login | Incidents tied to user + metadata |
 | `onBatchIncidents` / `onUrgentIncident` implemented | Data reaches your servers |

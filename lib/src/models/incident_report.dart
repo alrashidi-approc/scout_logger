@@ -4,11 +4,11 @@ import 'dart:io';
 import '../config/blackbox_app_context.dart';
 import '../config/incident_sharing_policy.dart';
 import '../core/connectivity_snapshot.dart';
+import '../config/sdk_constants.dart';
 import '../util/incident_time_format.dart';
 import 'log_models.dart';
 
 const String kIncidentSchemaVersion = '1.1';
-const String kScoutLoggerSdkVersion = '0.0.1';
 
 Map<String, dynamic> buildIncidentReport({
   required LogEnvelope envelope,

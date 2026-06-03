@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'package:meta/meta.dart';
+
 import '../config/blackbox_app_context.dart';
+import '../config/network_logging_policy.dart';
 import '../config/logger_config.dart';
+import '../config/production_config_validator.dart';
 import '../models/incident_report.dart';
 import '../models/log_models.dart';
 import 'batch_engine.dart';
@@ -46,6 +50,7 @@ class ScoutLogger {
     if (_instance != null) {
       return _instance!;
     }
+    assertProductionReadyConfig(config);
     final BlackboxAppContext appContext = config.autoResolveAppInfo
         ? await AppContextResolver.resolve(base: config.appContext)
         : config.appContext;
@@ -65,13 +70,25 @@ class ScoutLogger {
       runtimeVitalsProbe: config.runtimeVitalsProbe,
       buildFullIncidentOnWarnOrHigher: config.buildFullIncidentOnWarnOrHigher,
       incidentSharingPolicy: config.incidentSharingPolicy,
+      queueStoragePath: config.queueStoragePath,
+      emergencyStoragePath: config.emergencyStoragePath,
+      connectivityChecker: config.connectivityChecker,
+      networkLoggingPolicy: config.networkLoggingPolicy,
     );
     final BreadcrumbStore breadcrumbs =
         BreadcrumbStore(maxEntries: resolved.breadcrumbLimit);
-    final EncryptedLogStore store = EncryptedLogStore(resolved.encryptionKey);
-    final EmergencyDispatchQueue emergencyQueue =
-        EmergencyDispatchQueue(resolved.encryptionKey);
-    final NetworkDispatcher dispatcher = NetworkDispatcher(resolved);
+    final EncryptedLogStore store = EncryptedLogStore(
+      resolved.encryptionKey,
+      storagePath: resolved.queueStoragePath,
+    );
+    final EmergencyDispatchQueue emergencyQueue = EmergencyDispatchQueue(
+      resolved.encryptionKey,
+      storagePath: resolved.emergencyStoragePath,
+    );
+    final NetworkDispatcher dispatcher = NetworkDispatcher(
+      resolved,
+      connectivityChecker: resolved.connectivityChecker,
+    );
     final EmailIncidentReporter? emailReporter = resolved.emailReporting == null
         ? null
         : EmailIncidentReporter(resolved.emailReporting!);
@@ -109,6 +126,12 @@ class ScoutLogger {
     return value;
   }
 
+  @visibleForTesting
+  static void resetForTesting() {
+    _instance?._batchEngine.dispose();
+    _instance = null;
+  }
+
   final ScoutLoggerConfig _config;
   final ChronoBatchEngine _batchEngine;
   final BreadcrumbStore _breadcrumbStore;
@@ -124,6 +147,8 @@ class ScoutLogger {
 
   /// Observer to plug into `MaterialApp.navigatorObservers`.
   SmartUIObserver get navigatorObserver => _observer;
+
+  NetworkLoggingPolicy get networkLoggingPolicy => _config.networkLoggingPolicy;
 
   /// Binds the active user (e.g. after login). Safe to call anytime.
   void bindUser({
@@ -308,6 +333,34 @@ class ScoutAppLogger {
 
   static void setGlobalMetadata(Map<String, dynamic> metadata) =>
       ScoutLogger.instance.setGlobalMetadata(metadata);
+
+  static Future<void> updateLogLevelsRemote({
+    required LogLevel minimumLevel,
+    String? userId,
+  }) =>
+      ScoutLogger.instance.updateLogLevelsRemote(
+        minimumLevel: minimumLevel,
+        userId: userId,
+      );
+
+  static Future<void> log({
+    required Domain domain,
+    required LogCategory category,
+    required LogLevel level,
+    required String message,
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+    String? stackTrace,
+    bool immediateDispatch = false,
+  }) =>
+      ScoutLogger.instance.log(
+        domain: domain,
+        category: category,
+        level: level,
+        message: message,
+        metadata: metadata,
+        stackTrace: stackTrace,
+        immediateDispatch: immediateDispatch,
+      );
 }
 
 @Deprecated('Use ScoutAppLogger instead.')

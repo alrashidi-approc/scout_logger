@@ -1,12 +1,23 @@
 class PiiScrubber {
   static const Set<String> _sensitiveMarkers = <String>{
     'password',
+    'passwd',
+    'secret',
     'token',
     'authorization',
+    'auth',
+    'bearer',
+    'api_key',
+    'apikey',
     'card_number',
+    'cardnumber',
     'cvv',
+    'cvc',
+    'ssn',
     'email',
     'phone',
+    'otp',
+    'pin',
   };
 
   static dynamic scrub(dynamic value) {

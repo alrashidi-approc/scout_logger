@@ -17,7 +17,7 @@ void main() {
         'version': '1.0',
         'buildNumber': '1',
         'flavor': 'production',
-        'sdkVersion': '0.0.1',
+        'sdkVersion': '1.0.0',
         'platform': 'android',
       },
       'user': <String, dynamic>{'userId': 'u1'},

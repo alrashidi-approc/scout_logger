@@ -1,9 +1,14 @@
+import 'package:meta/meta.dart';
+
+import 'connectivity_checker.dart';
+import 'sdk_constants.dart';
 import '../models/log_models.dart';
 import 'blackbox_app_context.dart';
 import 'dispatch_policy.dart';
 import 'email_reporting_config.dart';
 import 'incident_sharing_policy.dart';
 import 'log_server_routing.dart';
+import 'network_logging_policy.dart';
 import 'upload_handlers.dart';
 
 export 'upload_handlers.dart';
@@ -14,7 +19,7 @@ class ScoutLoggerConfig {
     required this.bulkUploadHandler,
     required this.emergencyWebhookHandler,
     required this.appContext,
-    this.encryptionKey = 'scout_logger_default_key',
+    this.encryptionKey = kScoutLoggerDefaultEncryptionKey,
     this.dispatchPolicy = const LogDispatchPolicy(),
     this.serverRouting,
     this.emailReporting,
@@ -25,6 +30,10 @@ class ScoutLoggerConfig {
     this.runtimeVitalsProbe,
     this.buildFullIncidentOnWarnOrHigher = true,
     this.incidentSharingPolicy = const IncidentSharingPolicy(),
+    this.queueStoragePath,
+    this.emergencyStoragePath,
+    @visibleForTesting this.connectivityChecker,
+    this.networkLoggingPolicy = NetworkLoggingPolicy.defaults,
   });
 
   final String flavor;
@@ -42,6 +51,10 @@ class ScoutLoggerConfig {
   final RuntimeVitalsProbe? runtimeVitalsProbe;
   final bool buildFullIncidentOnWarnOrHigher;
   final IncidentSharingPolicy incidentSharingPolicy;
+  final String? queueStoragePath;
+  final String? emergencyStoragePath;
+  final ConnectivityChecker? connectivityChecker;
+  final NetworkLoggingPolicy networkLoggingPolicy;
 
   int get batchSize => dispatchPolicy.batchSize;
   Duration get batchWindow => dispatchPolicy.batchWindow;
@@ -57,13 +70,14 @@ class ScoutLoggerConfig {
     LogServerRouting? serverRouting,
     LogDispatchPolicy dispatchPolicy = const LogDispatchPolicy(),
     EmailReportingConfig? emailReporting,
-    String encryptionKey = 'scout_logger_default_key',
+    String encryptionKey = kScoutLoggerDefaultEncryptionKey,
     bool autoCollectDeviceDetails = true,
     int breadcrumbLimit = 50,
     LogLevel minimumLevel = LogLevel.info,
     RuntimeVitalsProbe? runtimeVitalsProbe,
     bool buildFullIncidentOnWarnOrHigher = true,
     IncidentSharingPolicy incidentSharingPolicy = const IncidentSharingPolicy(),
+    NetworkLoggingPolicy networkLoggingPolicy = NetworkLoggingPolicy.defaults,
   }) {
     BulkUploadHandler bulk = (List<LogEnvelope> logs) =>
         onBatchIncidents(logs.map((LogEnvelope e) => e.toIncidentJson()).toList());
@@ -126,6 +140,7 @@ class ScoutLoggerConfig {
       runtimeVitalsProbe: runtimeVitalsProbe,
       buildFullIncidentOnWarnOrHigher: buildFullIncidentOnWarnOrHigher,
       incidentSharingPolicy: incidentSharingPolicy,
+      networkLoggingPolicy: networkLoggingPolicy,
       bulkUploadHandler: bulk,
       emergencyWebhookHandler: (LogEnvelope log) => onUrgentIncident(log.toIncidentJson()),
     );

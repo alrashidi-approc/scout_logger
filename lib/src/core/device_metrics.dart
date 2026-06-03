@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:battery_plus/battery_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/services.dart';
 
@@ -15,7 +14,6 @@ class DeviceVitalsCollector {
   static const MethodChannel _channel = MethodChannel('scout_logger/system');
   final Future<Map<String, dynamic>> Function()? runtimeProbe;
   final bool collectExtendedDetails;
-  final Battery _battery = Battery();
 
   Future<DeviceVitalsSnapshot> collectAtCrashTime() async {
     final DeviceInfoPlugin infoPlugin = DeviceInfoPlugin();
@@ -69,17 +67,6 @@ class DeviceVitalsCollector {
         _asString(runtime['chargingState']);
     String? thermalState =
         _asString(thermalRaw['thermalState']) ?? _asString(runtime['thermalState']);
-
-    if (collectExtendedDetails) {
-      try {
-        batteryLevel ??= await _battery.batteryLevel / 100.0;
-        final BatteryState state = await _battery.batteryState;
-        chargingState ??= state.name;
-        extended['batteryState'] = state.name;
-      } catch (_) {
-        // battery_plus may be unavailable on some platforms (e.g. web).
-      }
-    }
 
     return DeviceVitalsSnapshot(
       osVersion: os,

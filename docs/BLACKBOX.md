@@ -45,7 +45,7 @@ ScoutAppLogger.bindUser(userId: user.id, sessionId: sessionId);
 |------|---------|
 | App version, build, package name | `package_info_plus` (when `autoResolveAppInfo: true`) |
 | Device model, OS, manufacturer, SDK int | `device_info_plus` |
-| Battery level & state | `battery_plus` |
+| Battery level & state | `runtimeVitalsProbe` or `scout_logger/system` channel |
 | RAM used | `dart:io` `ProcessInfo` |
 | Connectivity online + types | `connectivity_plus` |
 | Navigation user flow | `SmartUIObserver` |

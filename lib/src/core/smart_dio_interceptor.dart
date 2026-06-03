@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
+import '../config/network_logging_policy.dart';
 import '../models/log_models.dart';
 import 'network_timing_keys.dart';
 import 'scout_logger_manager.dart';
@@ -21,18 +22,27 @@ class SmartDioInterceptor extends Interceptor {
   /// Creates a Dio interceptor that emits sanitized network logs.
   SmartDioInterceptor.fromLogger(
     ScoutLogger logger, {
+    NetworkLoggingPolicy? networkPolicy,
     Uuid? uuid,
     int Function()? nowMicros,
-  }) : this(logger.log, uuid: uuid, nowMicros: nowMicros);
+  }) : this(
+         logger.log,
+         networkPolicy: networkPolicy ?? logger.networkLoggingPolicy,
+         uuid: uuid,
+         nowMicros: nowMicros,
+       );
 
   SmartDioInterceptor(
     this._emitLog, {
+    NetworkLoggingPolicy networkPolicy = NetworkLoggingPolicy.defaults,
     Uuid? uuid,
     int Function()? nowMicros,
-  }) : _uuid = uuid ?? const Uuid(),
+  }) : _policy = networkPolicy,
+       _uuid = uuid ?? const Uuid(),
        _nowMicros = nowMicros ?? (() => DateTime.now().microsecondsSinceEpoch);
 
   final NetworkLogEmitter _emitLog;
+  final NetworkLoggingPolicy _policy;
   final Uuid _uuid;
   final int Function() _nowMicros;
 
@@ -46,6 +56,11 @@ class SmartDioInterceptor extends Interceptor {
     options.headers['X-Trace-ID'] = traceId;
     options.extra[kScoutStartUsKey] = start;
     options.extra[kScoutTraceIdKey] = traceId;
+
+    if (!_policy.shouldLogRequest()) {
+      handler.next(options);
+      return;
+    }
 
     _emitLog(
       domain: Domain.external,
@@ -73,6 +88,11 @@ class SmartDioInterceptor extends Interceptor {
     final int ttfbUs = firstByte - start;
     final int payloadUs = doneAt - firstByte;
     final int totalUs = doneAt - start;
+
+    if (!_policy.shouldLogResponse(response.statusCode)) {
+      handler.next(response);
+      return;
+    }
 
     _emitLog(
       domain: Domain.external,
@@ -113,6 +133,12 @@ class SmartDioInterceptor extends Interceptor {
     final int ttfbUs = firstByte - start;
     final int totalUs = doneAt - start;
     final int payloadUs = doneAt - firstByte;
+
+    if (!_policy.shouldLogFailure(err.response?.statusCode)) {
+      handler.next(err);
+      return;
+    }
+
     _emitLog(
       domain: Domain.external,
       category: LogCategory.network,

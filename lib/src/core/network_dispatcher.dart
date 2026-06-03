@@ -1,17 +1,24 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:meta/meta.dart';
 
-import '../config/dispatch_policy.dart';
+import '../config/connectivity_checker.dart';
 import '../config/logger_config.dart';
 import '../models/log_models.dart';
 
 class NetworkDispatcher {
-  NetworkDispatcher(this._config);
+  NetworkDispatcher(
+    this._config, {
+    @visibleForTesting ConnectivityChecker? connectivityChecker,
+  }) : _connectivityChecker = connectivityChecker ?? _defaultConnectivityCheck;
 
   final ScoutLoggerConfig _config;
+  final ConnectivityChecker _connectivityChecker;
+
+  static Future<List<ConnectivityResult>> _defaultConnectivityCheck() =>
+      Connectivity().checkConnectivity();
 
   Future<bool> canSyncNow() async {
-    final List<ConnectivityResult> connectivity =
-        await Connectivity().checkConnectivity();
+    final List<ConnectivityResult> connectivity = await _connectivityChecker();
     if (connectivity.contains(ConnectivityResult.none)) {
       return false;
     }

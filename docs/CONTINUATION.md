@@ -29,8 +29,10 @@ Public API naming target: `ScoutAppLogger` (facade exists; internal types still 
 | 03 | Chrono batch: time window sync, chunked drain, retry timer, re-entry guard | Done |
 | 04 | Timed Dio adapter + interceptor waterfall + success/error integration tests | Done |
 | 05 | `runtimeVitalsProbe` config fallback for battery/thermal/free RAM | Done |
+| 06 | Dispatch policy tests: Wi‑Fi-only, backoff, remote log level | Done |
+| — | **1.0.0 production** — config guard, backend guide, network policy | Done |
 
-Details per pack: see `docs/feature-packs/README.md`.
+Details per pack: see `docs/feature-packs/README.md`. Backend: [`docs/BACKEND_INGESTION.md`](BACKEND_INGESTION.md).
 
 ## How to Verify Locally
 
@@ -89,15 +91,15 @@ MaterialApp(
 
 ## Recommended Next Work (Priority Order)
 
-1. **Broader tests** — remote log level, Wi-Fi-only sync, backoff under flaky network.
-2. **Crash follow-ups** — optional backup sink; restart-safe pending-crash strategy.
-3. **Batch follow-ups** — jittered backoff; persistent retry state across restarts.
-4. **Network follow-ups** — chunked streaming tests; platform timing calibration.
+1. **Crash follow-ups** — optional backup sink; restart-safe pending-crash strategy.
+2. **Batch follow-ups** — jittered backoff; persistent retry state across restarts.
+3. **Network follow-ups** — chunked streaming tests; platform timing calibration.
 
 ## Recently completed
 
-- **README + CHANGELOG** — package docs and `0.0.1` release notes.
-- **Emergency dispatch fallback** — failed urgent webhooks persist to `scout_logger_emergency.enc` and drain before batch sync (`EmergencyDispatchQueue`).
+- **v1.0.0 production** — `assertProductionReadyConfig`, `BACKEND_INGESTION.md`, `NetworkLoggingPolicy`, PII scrub expansion, `ScoutAppLogger.log` facade.
+- **Pack 06 tests** — Wi‑Fi-only, backoff, remote log level.
+- **Emergency dispatch fallback** — `EmergencyDispatchQueue`.
 
 ## Key Files
 

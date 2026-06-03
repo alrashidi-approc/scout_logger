@@ -1,6 +1,10 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "incidentId": "1739350123456789",
+  "time": {
+    "utc": "2026-06-02T14:22:11.123Z",
+    "local": "2026-06-02T17:22:11.123+03:00"
+  },
   "timestamp": "2026-06-02T14:22:11.123Z",
   "event": {
     "level": "ERROR",
@@ -15,7 +19,7 @@
     "version": "2.4.1",
     "buildNumber": "204100",
     "packageName": "com.company.shop",
-    "sdkVersion": "0.0.1",
+    "sdkVersion": "1.0.0",
     "platform": "android"
   },
   "user": {
@@ -111,5 +115,17 @@
     "path": "/api/v1/payments/charge",
     "method": "POST",
     "statusCode": 503
+  },
+  "payload": {
+    "detailLevel": "focused",
+    "sectionsIncluded": {
+      "device": true,
+      "connectivity": true,
+      "screen": true,
+      "network": true,
+      "custom": true,
+      "userFlow": true,
+      "stackTrace": true
+    }
   }
 }
