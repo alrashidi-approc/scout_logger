@@ -70,6 +70,7 @@ class LogEnvelope {
     required this.message,
     required this.timestamp,
     this.metadata = const <String, dynamic>{},
+    this.incidentCustom = const <String, dynamic>{},
     this.stackTrace,
     this.breadcrumbs = const <Breadcrumb>[],
     this.deviceVitals,
@@ -85,6 +86,8 @@ class LogEnvelope {
   final String message;
   final DateTime timestamp;
   final Map<String, dynamic> metadata;
+  /// App-owned fields for incident `custom` only (never duplicated in `network.triggering`).
+  final Map<String, dynamic> incidentCustom;
   final String? stackTrace;
   final List<Breadcrumb> breadcrumbs;
   final DeviceVitalsSnapshot? deviceVitals;
@@ -109,6 +112,7 @@ class LogEnvelope {
     String? message,
     DateTime? timestamp,
     Map<String, dynamic>? metadata,
+    Map<String, dynamic>? incidentCustom,
     String? stackTrace,
     List<Breadcrumb>? breadcrumbs,
     DeviceVitalsSnapshot? deviceVitals,
@@ -124,6 +128,7 @@ class LogEnvelope {
       message: message ?? this.message,
       timestamp: timestamp ?? this.timestamp,
       metadata: metadata ?? this.metadata,
+      incidentCustom: incidentCustom ?? this.incidentCustom,
       stackTrace: stackTrace ?? this.stackTrace,
       breadcrumbs: breadcrumbs ?? this.breadcrumbs,
       deviceVitals: deviceVitals ?? this.deviceVitals,
@@ -144,6 +149,7 @@ class LogEnvelope {
         'message': message,
         'timestamp': timestamp.toIso8601String(),
         'metadata': metadata,
+        if (incidentCustom.isNotEmpty) 'incidentCustom': incidentCustom,
         'stackTrace': stackTrace,
         'breadcrumbs': breadcrumbs.map((item) => item.toJson()).toList(),
         'deviceVitals': deviceVitals?.toJson(),

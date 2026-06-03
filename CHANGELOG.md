@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-03
+
 ### Added
 
 - **Issue dedupe & counts:** `IncidentOccurrencePolicy` + in-session tracker — repeats with the same `groupingKey` are not uploaded/emailed until a rollup cooldown; payload includes `triage.occurrence` (`count`, `sinceLastReport`, `firstSeenAt`, `lastSeenAt`, `reportReason`).
 - **Smarter urgent email:** shorter alert body, `×N` in subject on repeats, email cooldown per grouping key (default 1h), stack omitted on rollup emails.
 - Duplicate **urgent webhook** suppressed after the first fatal per `groupingKey` (rollup still goes to batch).
 - **`app.name`** on every incident (and `deployment.appName`) for backend partitioning; set via `BlackboxAppContext.appName`, `ScoutLoggerConfig.blackbox(appName: ...)`, or auto from `PackageInfo.appName`.
+- **`customMetadata` on `log()` / `ScoutAppLogger` shortcuts** and **`options.scoutIncidentCustom`** on Dio — app fields always merged into incident `custom`.
+
+### Changed
+
+- **NETWORK incidents:** Dio/network fields only in `network.triggering`; `custom` holds `globalMetadata` + app `customMetadata` (no duplicate trace/path/waterfall).
 
 ## [1.1.0] - 2026-06-03
 
@@ -65,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial Scout App Logger SDK (`scout_logger` package).
 - Encrypted queue, crash hooks, Dio interceptor, batch engine, emergency queue.
 
+[1.2.0]: https://github.com/alrashidi-approc/scout_logger/releases/tag/v1.2.0
 [1.1.0]: https://github.com/alrashidi-approc/scout_logger/releases/tag/v1.1.0
 [1.0.0]: https://github.com/alrashidi-approc/scout_logger/releases/tag/v1.0.0
 [0.0.2]: https://github.com/alrashidi-approc/scout_logger/releases/tag/v0.0.2

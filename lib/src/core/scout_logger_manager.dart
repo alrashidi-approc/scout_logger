@@ -242,6 +242,7 @@ class ScoutLogger {
     required LogLevel level,
     required String message,
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     String? stackTrace,
     bool immediateDispatch = false,
   }) async {
@@ -287,6 +288,7 @@ class ScoutLogger {
           message: message,
           timestamp: at,
           metadata: metadata,
+          incidentCustom: customMetadata,
           stackTrace: stackTrace,
           breadcrumbs: flow,
           deviceVitals: vitals,
@@ -340,6 +342,7 @@ class ScoutLogger {
       message: message,
       timestamp: at,
       metadata: metadata,
+      incidentCustom: customMetadata,
       stackTrace: stackTrace,
       breadcrumbs: flow,
       deviceVitals: vitals,
@@ -492,6 +495,7 @@ class ScoutAppLogger {
     required LogLevel level,
     required String message,
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     String? stackTrace,
     bool immediateDispatch = false,
   }) =>
@@ -501,6 +505,7 @@ class ScoutAppLogger {
         level: level,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
         stackTrace: stackTrace,
         immediateDispatch: immediateDispatch,
       );

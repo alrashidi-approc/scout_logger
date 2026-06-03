@@ -6,6 +6,7 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
   Future<void> debug(
     String message, {
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     LogCategory category = LogCategory.logic,
   }) =>
       log(
@@ -14,11 +15,13 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
         level: LogLevel.debug,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
       );
 
   Future<void> info(
     String message, {
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     LogCategory category = LogCategory.logic,
   }) =>
       log(
@@ -27,11 +30,13 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
         level: LogLevel.info,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
       );
 
   Future<void> warn(
     String message, {
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     String? stackTrace,
     LogCategory category = LogCategory.logic,
   }) =>
@@ -41,12 +46,14 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
         level: LogLevel.warn,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
         stackTrace: stackTrace,
       );
 
   Future<void> error(
     String message, {
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     String? stackTrace,
     LogCategory category = LogCategory.logic,
   }) =>
@@ -56,12 +63,14 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
         level: LogLevel.error,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
         stackTrace: stackTrace,
       );
 
   Future<void> fatal(
     String message, {
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     String? stackTrace,
     LogCategory category = LogCategory.systemCrash,
   }) =>
@@ -71,12 +80,14 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
         level: LogLevel.fatal,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
         stackTrace: stackTrace,
       );
 
   Future<void> critical(
     String message, {
     Map<String, dynamic> metadata = const <String, dynamic>{},
+    Map<String, dynamic> customMetadata = const <String, dynamic>{},
     String? stackTrace,
     LogCategory category = LogCategory.logic,
   }) =>
@@ -86,6 +97,7 @@ extension ScoutLoggerSimpleLog on ScoutLogger {
         level: LogLevel.critical,
         message: message,
         metadata: metadata,
+        customMetadata: customMetadata,
         stackTrace: stackTrace,
       );
 }

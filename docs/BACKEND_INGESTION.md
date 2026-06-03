@@ -14,7 +14,7 @@ Return `true` from batch handler only after durable server-side accept. Failed b
 ## Schema
 
 - **Version field:** `schemaVersion` (current: `1.2`)
-- **SDK field:** `app.sdkVersion` (package version, e.g. `1.0.0`)
+- **SDK field:** `app.sdkVersion` (package version, e.g. `1.2.0`)
 - **Canonical sample:** [`SAMPLE_INCIDENT.json`](SAMPLE_INCIDENT.json)
 
 ### Top-level map (what to index)
@@ -48,7 +48,8 @@ Return `true` from batch handler only after durable server-side accept. Failed b
 
 ## Correlating with server logs
 
-1. Read `network.triggering.traceId` (or `custom.traceId` on network errors).
+1. Read `network.triggering.traceId` for network errors (`custom` does not repeat Dio fields).
+2. App-only fields live in `custom` via `customMetadata` on `log()`, `setGlobalMetadata`, or Dio `options.scoutIncidentCustom`.
 2. Match against API gateway / service logs using the same header the app sent: **`X-Trace-ID`**.
 3. Use `network.triggering.waterfallUs` or `networkWaterfallSec` for latency breakdown (TTFB vs download).
 

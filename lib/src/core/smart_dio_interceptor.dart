@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/network_logging_policy.dart';
 import '../models/log_models.dart';
+import '../util/network_incident_metadata.dart';
 import 'network_timing_keys.dart';
 import 'scout_logger_manager.dart';
 import 'scrubber.dart';
@@ -14,6 +15,7 @@ typedef NetworkLogEmitter =
       required LogLevel level,
       required String message,
       Map<String, dynamic> metadata,
+      Map<String, dynamic> customMetadata,
       String? stackTrace,
       bool immediateDispatch,
     });
@@ -75,6 +77,7 @@ class SmartDioInterceptor extends Interceptor {
         'headers': PiiScrubber.scrub(options.headers),
         'body': PiiScrubber.scrub(options.data),
       },
+      customMetadata: incidentCustomFromDioExtra(options.extra),
     );
     handler.next(options);
   }
@@ -118,6 +121,7 @@ class SmartDioInterceptor extends Interceptor {
         ],
         'response': PiiScrubber.scrub(response.data),
       },
+      customMetadata: incidentCustomFromDioExtra(response.requestOptions.extra),
     );
     handler.next(response);
   }
@@ -165,6 +169,7 @@ class SmartDioInterceptor extends Interceptor {
         'requestBody': PiiScrubber.scrub(err.requestOptions.data),
         'responseBody': PiiScrubber.scrub(err.response?.data),
       },
+      customMetadata: incidentCustomFromDioExtra(err.requestOptions.extra),
       stackTrace: err.stackTrace.toString(),
     );
     handler.next(err);

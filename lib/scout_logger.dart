@@ -13,6 +13,7 @@ export 'src/core/app_context_resolver.dart';
 export 'src/reporting/incident_email_formatter.dart';
 export 'src/core/scout_logger_manager.dart';
 export 'src/core/simple_log.dart';
+export 'src/core/network_timing_keys.dart';
 export 'src/core/smart_dio_interceptor.dart';
 export 'src/core/smart_ui_observer.dart';
 export 'src/extensions/dio_extension.dart';

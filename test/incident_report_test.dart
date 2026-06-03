@@ -71,6 +71,71 @@ void main() {
     expect((report['screen'] as Map)['userFlow'], hasLength(1));
     expect((report['network'] as Map)['triggering'], containsPair('traceId', 'trace-abc'));
     expect(report['custom'], containsPair('tenant', 'kw'));
+    expect((report['custom'] as Map).containsKey('traceId'), isFalse);
+    expect((report['custom'] as Map).containsKey('path'), isFalse);
     expect(incidentReportToJson(report), contains('trace-abc'));
+  });
+
+  test('network incident merges explicit customMetadata without network dupes', () {
+    final LogEnvelope envelope = LogEnvelope(
+      id: 'inc-3',
+      flavor: 'production',
+      domain: Domain.external,
+      category: LogCategory.network,
+      level: LogLevel.error,
+      message: 'API request failed',
+      timestamp: DateTime.parse('2026-06-02T12:00:00.000Z'),
+      metadata: <String, dynamic>{
+        'traceId': 't-1',
+        'path': '/inbox',
+        'method': 'GET',
+        'statusCode': 404,
+      },
+      incidentCustom: <String, dynamic>{'feature': 'inbox', 'userId': '9898'},
+    );
+
+    const BlackboxAppContext app = BlackboxAppContext(
+      appVersion: '1.0.0',
+      buildNumber: '1',
+      packageName: 'com.test',
+    );
+
+    final Map<String, dynamic> report = buildIncidentReport(
+      envelope: envelope,
+      app: app,
+      flavor: 'production',
+    );
+
+    expect((report['custom'] as Map)['feature'], 'inbox');
+    expect((report['custom'] as Map).containsKey('path'), isFalse);
+    expect((report['network'] as Map)['triggering'], containsPair('path', '/inbox'));
+  });
+
+  test('custom keeps envelope metadata for non-network incidents', () {
+    final LogEnvelope envelope = LogEnvelope(
+      id: 'inc-2',
+      flavor: 'production',
+      domain: Domain.internal,
+      category: LogCategory.logic,
+      level: LogLevel.error,
+      message: 'Payment failed',
+      timestamp: DateTime.parse('2026-06-02T12:00:00.000Z'),
+      metadata: <String, dynamic>{'orderId': 'ord_1', 'traceId': 't-1'},
+    );
+
+    const BlackboxAppContext app = BlackboxAppContext(
+      appVersion: '1.0.0',
+      buildNumber: '1',
+      packageName: 'com.test',
+    );
+
+    final Map<String, dynamic> report = buildIncidentReport(
+      envelope: envelope,
+      app: app,
+      flavor: 'production',
+    );
+
+    expect((report['custom'] as Map)['orderId'], 'ord_1');
+    expect((report['custom'] as Map)['traceId'], 't-1');
   });
 }

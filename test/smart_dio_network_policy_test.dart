@@ -76,6 +76,7 @@ Dio _dioWithPolicy(
           required LogLevel level,
           required String message,
           Map<String, dynamic> metadata = const <String, dynamic>{},
+          Map<String, dynamic> customMetadata = const <String, dynamic>{},
           String? stackTrace,
           bool immediateDispatch = false,
         }) async {

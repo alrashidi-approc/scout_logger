@@ -7,6 +7,7 @@ import '../core/connectivity_snapshot.dart';
 import '../config/sdk_constants.dart';
 import '../util/incident_fingerprint.dart';
 import '../util/incident_time_format.dart';
+import '../util/network_incident_metadata.dart';
 import 'log_models.dart';
 
 const String kIncidentSchemaVersion = '1.2';
@@ -68,10 +69,19 @@ Map<String, dynamic> buildIncidentReport({
 
   Map<String, dynamic>? custom;
   if (sections.custom) {
-    custom = <String, dynamic>{
+    final bool omitNetworkDupes = sections.network &&
+        envelope.category == LogCategory.network;
+    final Map<String, dynamic> merged = <String, dynamic>{
       ...app.globalMetadata,
-      ...envelope.metadata,
+      ...envelopeMetadataForCustom(
+        metadata: envelope.metadata,
+        omitNetworkFields: omitNetworkDupes,
+      ),
+      ...envelope.incidentCustom,
     };
+    if (merged.isNotEmpty) {
+      custom = merged;
+    }
   }
 
   final Map<String, dynamic> user = <String, dynamic>{

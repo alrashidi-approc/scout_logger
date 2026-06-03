@@ -1,18 +1,25 @@
 # Scout App Logger (`scout_logger`)
 
-A Flutter **blackbox** for production apps: one JSON incident per issue (user, device, screen flow, API, crash stack), encrypted offline queue, and optional team email. **Dart-only** — no custom native plugin.
+**Current release: [v1.2.0](https://github.com/alrashidi-approc/scout_logger/releases/tag/v1.2.0)**
+
+A Flutter **blackbox** for production apps: one JSON incident per issue (user, device, screen flow, API, crash stack), encrypted offline queue, batch + urgent upload, and optional team email. **Dart-only** — no custom native plugin.
 
 ---
 
 ## Install
+
+Pin the tag in your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   scout_logger:
     git:
       url: https://github.com/alrashidi-approc/scout_logger.git
+      ref: v1.2.0
   dio: ^5.9.0
 ```
+
+For the latest `main` (unreleased), omit `ref`.
 
 ```bash
 flutter pub get
@@ -40,9 +47,20 @@ Requires Dart **≥ 3.10** · Flutter **≥ 1.17**
 | 12 | **App identity** | `app.name` + `deployment.appName` — partition all data per app on backend |
 | 13 | **Triage** | `groupingKey`, tags, contexts, `deployment.release` (schema **1.2**) |
 | 14 | **Repeat issues** | Same error counted; rollup upload after cooldown (no spam) |
-| 15 | **Simple logs** | `ScoutAppLogger.error('…')` without full `log(...)` boilerplate |
+| 15 | **Custom payload** | `customMetadata` / `scoutIncidentCustom` — app fields without duplicating network data |
+| 16 | **Simple logs** | `ScoutAppLogger.error('…')` without full `log(...)` boilerplate |
 
-Details: [`docs/BLACKBOX.md`](docs/BLACKBOX.md) · **Sample incident (schema 1.2):** [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json) · **Backend guide:** [`docs/BACKEND_INGESTION.md`](docs/BACKEND_INGESTION.md)
+Details: [`docs/BLACKBOX.md`](docs/BLACKBOX.md) · **Sample incident (schema 1.2):** [`docs/SAMPLE_INCIDENT.json`](docs/SAMPLE_INCIDENT.json) · **Backend guide:** [`docs/BACKEND_INGESTION.md`](docs/BACKEND_INGESTION.md) · **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
+
+---
+
+## What’s new in v1.2.0
+
+- **`app.name`** / **`deployment.appName`** — route all incidents to one backend bucket per app.
+- **Repeat issues** — same `groupingKey` counted; rollup after cooldown; smarter deduped email + urgent webhook.
+- **Leaner JSON** — network data only in `network.triggering`; app extras via `customMetadata` or Dio `scoutIncidentCustom`.
+
+Upgrade from 1.1.0: add `appName:` on init, set `occurrencePolicy` if you want dedupe (defaults are on), use `customMetadata` instead of putting app fields in Dio `metadata`.
 
 ---
 
@@ -123,6 +141,31 @@ ScoutLoggerConfig.blackbox(
 ```
 
 With `autoResolveAppInfo: true` and no `appName`, the SDK uses the platform display name from `PackageInfo`, then falls back to `packageName`.
+
+---
+
+## Custom fields on incidents
+
+For **NETWORK** errors, Dio data lives only in `network.triggering`. App-specific fields go in **`custom`** via:
+
+| API | Use when |
+|-----|----------|
+| `customMetadata:` on `log()` / `ScoutAppLogger.error(...)` | Manual logs |
+| `ScoutAppLogger.setGlobalMetadata({...})` | Same on every incident |
+| `options.scoutIncidentCustom = {...}` on Dio | Per API call (inbox id, feature, …) |
+
+```dart
+// Per failed GET — merged into incident custom, not duplicated in network
+options.scoutIncidentCustom = {
+  'feature': 'inbox',
+  'civilId': userId,
+};
+
+await ScoutAppLogger.error(
+  'Checkout validation failed',
+  customMetadata: {'step': 'pay', 'orderId': orderId},
+);
+```
 
 ---
 

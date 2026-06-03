@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scout_logger/src/core/network_timing_keys.dart';
 import 'package:scout_logger/src/core/smart_dio_interceptor.dart';
 import 'package:scout_logger/src/core/timed_http_client_adapter.dart';
 import 'package:scout_logger/src/models/log_models.dart';
@@ -22,6 +23,7 @@ void main() {
             required LogLevel level,
             required String message,
             Map<String, dynamic> metadata = const <String, dynamic>{},
+            Map<String, dynamic> customMetadata = const <String, dynamic>{},
             String? stackTrace,
             bool immediateDispatch = false,
           }) async {
@@ -32,6 +34,7 @@ void main() {
                 level: level,
                 message: message,
                 metadata: metadata,
+                customMetadata: customMetadata,
               ),
             );
           },
@@ -71,6 +74,7 @@ void main() {
             required LogLevel level,
             required String message,
             Map<String, dynamic> metadata = const <String, dynamic>{},
+            Map<String, dynamic> customMetadata = const <String, dynamic>{},
             String? stackTrace,
             bool immediateDispatch = false,
           }) async {
@@ -81,6 +85,7 @@ void main() {
                 level: level,
                 message: message,
                 metadata: metadata,
+                customMetadata: customMetadata,
               ),
             );
           },
@@ -114,6 +119,55 @@ void main() {
         failure.metadata['responseBody'] as Map<dynamic, dynamic>;
     expect(requestBody['password'], '[REDACTED]');
     expect(responseBody['token'], '[REDACTED]');
+  });
+
+  test('forwards dio scoutIncidentCustom on failed requests', () async {
+    final List<_CapturedLog> captured = <_CapturedLog>[];
+    final Dio dio = Dio()
+      ..httpClientAdapter = TimedHttpClientAdapter(_ErrorAdapter())
+      ..interceptors.add(
+        SmartDioInterceptor(
+          ({
+            required Domain domain,
+            required LogCategory category,
+            required LogLevel level,
+            required String message,
+            Map<String, dynamic> metadata = const <String, dynamic>{},
+            Map<String, dynamic> customMetadata = const <String, dynamic>{},
+            String? stackTrace,
+            bool immediateDispatch = false,
+          }) async {
+            captured.add(
+              _CapturedLog(
+                domain: domain,
+                category: category,
+                level: level,
+                message: message,
+                metadata: metadata,
+                customMetadata: customMetadata,
+              ),
+            );
+          },
+        ),
+      );
+
+    try {
+      await dio.get<Object>(
+        '/fail',
+        options: Options(
+          extra: <String, dynamic>{
+            kScoutIncidentCustomKey: <String, dynamic>{'feature': 'inbox'},
+          },
+        ),
+      );
+    } on DioException {
+      // expected
+    }
+
+    final _CapturedLog failure = captured.firstWhere(
+      (_CapturedLog log) => log.message == 'API request failed',
+    );
+    expect(failure.customMetadata['feature'], 'inbox');
   });
 }
 
@@ -178,6 +232,7 @@ class _CapturedLog {
     required this.level,
     required this.message,
     required this.metadata,
+    this.customMetadata = const <String, dynamic>{},
   });
 
   final Domain domain;
@@ -185,4 +240,5 @@ class _CapturedLog {
   final LogLevel level;
   final String message;
   final Map<String, dynamic> metadata;
+  final Map<String, dynamic> customMetadata;
 }

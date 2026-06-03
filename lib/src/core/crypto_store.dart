@@ -149,6 +149,9 @@ class EncryptedLogStore {
       metadata: Map<String, dynamic>.from(
         json['metadata'] as Map<String, dynamic>? ?? <String, dynamic>{},
       ),
+      incidentCustom: Map<String, dynamic>.from(
+        json['incidentCustom'] as Map<String, dynamic>? ?? <String, dynamic>{},
+      ),
       stackTrace: json['stackTrace'] as String?,
       breadcrumbs: breadcrumbsJson
           .map(
