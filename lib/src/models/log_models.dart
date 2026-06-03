@@ -34,6 +34,7 @@ class DeviceVitalsSnapshot {
     this.batteryLevel,
     this.chargingState,
     this.thermalState,
+    this.extendedDetails = const <String, dynamic>{},
   });
 
   final String osVersion;
@@ -44,6 +45,7 @@ class DeviceVitalsSnapshot {
   final double? batteryLevel;
   final String? chargingState;
   final String? thermalState;
+  final Map<String, dynamic> extendedDetails;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'osVersion': osVersion,
@@ -54,6 +56,7 @@ class DeviceVitalsSnapshot {
         'batteryLevel': batteryLevel,
         'chargingState': chargingState,
         'thermalState': thermalState,
+        ...extendedDetails,
       };
 }
 
@@ -71,6 +74,7 @@ class LogEnvelope {
     this.breadcrumbs = const <Breadcrumb>[],
     this.deviceVitals,
     this.immediateDispatch = false,
+    this.incidentReport,
   });
 
   final String id;
@@ -85,6 +89,8 @@ class LogEnvelope {
   final List<Breadcrumb> breadcrumbs;
   final DeviceVitalsSnapshot? deviceVitals;
   final bool immediateDispatch;
+  /// Single JSON-ready map: user, device, connectivity, screen flow, API, stack, custom.
+  final Map<String, dynamic>? incidentReport;
 
   bool get isErrorOrHigher =>
       level == LogLevel.error ||
@@ -107,6 +113,7 @@ class LogEnvelope {
     List<Breadcrumb>? breadcrumbs,
     DeviceVitalsSnapshot? deviceVitals,
     bool? immediateDispatch,
+    Map<String, dynamic>? incidentReport,
   }) {
     return LogEnvelope(
       id: id ?? this.id,
@@ -121,8 +128,12 @@ class LogEnvelope {
       breadcrumbs: breadcrumbs ?? this.breadcrumbs,
       deviceVitals: deviceVitals ?? this.deviceVitals,
       immediateDispatch: immediateDispatch ?? this.immediateDispatch,
+      incidentReport: incidentReport ?? this.incidentReport,
     );
   }
+
+  /// Full incident document as JSON string (for blackbox upload handlers).
+  String toIncidentJson() => jsonEncode(incidentReport ?? toJson());
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
@@ -137,6 +148,7 @@ class LogEnvelope {
         'breadcrumbs': breadcrumbs.map((item) => item.toJson()).toList(),
         'deviceVitals': deviceVitals?.toJson(),
         'immediateDispatch': immediateDispatch,
+        if (incidentReport != null) 'incidentReport': incidentReport,
       };
 
   String toCompactJson() => jsonEncode(toJson());

@@ -6,27 +6,50 @@ import 'package:flutter/services.dart';
 import '../models/log_models.dart';
 
 class DeviceVitalsCollector {
-  DeviceVitalsCollector({this.runtimeProbe});
+  DeviceVitalsCollector({
+    this.runtimeProbe,
+    this.collectExtendedDetails = true,
+  });
 
   static const MethodChannel _channel = MethodChannel('scout_logger/system');
   final Future<Map<String, dynamic>> Function()? runtimeProbe;
+  final bool collectExtendedDetails;
 
   Future<DeviceVitalsSnapshot> collectAtCrashTime() async {
     final DeviceInfoPlugin infoPlugin = DeviceInfoPlugin();
     String os = Platform.operatingSystemVersion;
     String model = 'unknown';
     String maker = 'unknown';
+    final Map<String, dynamic> extended = <String, dynamic>{
+      'platform': Platform.operatingSystem,
+    };
 
     if (Platform.isAndroid) {
       final AndroidDeviceInfo info = await infoPlugin.androidInfo;
       os = info.version.release;
       model = info.model;
       maker = info.manufacturer;
+      if (collectExtendedDetails) {
+        extended.addAll(<String, dynamic>{
+          'androidSdkInt': info.version.sdkInt,
+          'brand': info.brand,
+          'device': info.device,
+          'isPhysicalDevice': info.isPhysicalDevice,
+          'supportedAbis': info.supportedAbis,
+        });
+      }
     } else if (Platform.isIOS) {
       final IosDeviceInfo info = await infoPlugin.iosInfo;
       os = info.systemVersion;
       model = info.utsname.machine;
       maker = 'Apple';
+      if (collectExtendedDetails) {
+        extended.addAll(<String, dynamic>{
+          'systemName': info.systemName,
+          'isPhysicalDevice': info.isPhysicalDevice,
+          'identifierForVendor': info.identifierForVendor,
+        });
+      }
     }
 
     final Map<Object?, Object?> batteryRaw =
@@ -37,11 +60,12 @@ class DeviceVitalsCollector {
     final int usedRam = ProcessInfo.currentRss;
     final int? freeRamBytes =
         _asInt(batteryRaw['freeRamBytes']) ?? _asInt(runtime['freeRamBytes']);
-    final double? batteryLevel =
+
+    double? batteryLevel =
         _asDouble(batteryRaw['batteryLevel']) ?? _asDouble(runtime['batteryLevel']);
-    final String? chargingState = _asString(batteryRaw['chargingState']) ??
+    String? chargingState = _asString(batteryRaw['chargingState']) ??
         _asString(runtime['chargingState']);
-    final String? thermalState =
+    String? thermalState =
         _asString(thermalRaw['thermalState']) ?? _asString(runtime['thermalState']);
 
     return DeviceVitalsSnapshot(
@@ -53,6 +77,7 @@ class DeviceVitalsCollector {
       batteryLevel: batteryLevel,
       chargingState: chargingState,
       thermalState: thermalState,
+      extendedDetails: extended,
     );
   }
 
@@ -63,7 +88,7 @@ class DeviceVitalsCollector {
         return result;
       }
     } catch (_) {
-      // Missing platform implementation is accepted for package consumers.
+      //
     }
     return null;
   }

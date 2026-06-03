@@ -1,6 +1,6 @@
 # Continue Development Anywhere
 
-Use this file to resume work on the Smart Eye Logger SDK (`scout_logger` package on disk).
+Use this file to resume work on the Scout App Logger SDK (`scout_logger` package on disk).
 
 ## Repository
 
@@ -10,7 +10,7 @@ Use this file to resume work on the Smart Eye Logger SDK (`scout_logger` package
 
 ## Cursor / Agent Context
 
-- **Workspace rule:** `.cursor/rules/smart-eye-logger-role.mdc` (always applied)
+- **Workspace rule:** `.cursor/rules/scout-app-logger-role.mdc` (always applied)
 - **Feature pack docs:** `docs/feature-packs/` (grouped implementation history)
 - **This handoff:** `docs/CONTINUATION.md`
 
@@ -18,7 +18,7 @@ Use this file to resume work on the Smart Eye Logger SDK (`scout_logger` package
 
 Production-grade Flutter client logging SDK — a mobile “flight data recorder” for UI breadcrumbs, network waterfalls, encrypted offline queue, batch upload, crash hooks, and urgent fatal dispatch — without blocking the UI thread.
 
-Public API naming target: `SmartEyeLogger` (facade exists; internal types still use `Scout*` in places).
+Public API naming target: `ScoutAppLogger` (facade exists; internal types still use `Scout*` in places).
 
 ## Session History (What Was Built)
 
@@ -29,8 +29,10 @@ Public API naming target: `SmartEyeLogger` (facade exists; internal types still 
 | 03 | Chrono batch: time window sync, chunked drain, retry timer, re-entry guard | Done |
 | 04 | Timed Dio adapter + interceptor waterfall + success/error integration tests | Done |
 | 05 | `runtimeVitalsProbe` config fallback for battery/thermal/free RAM | Done |
+| 06 | Dispatch policy tests: Wi‑Fi-only, backoff, remote log level | Done |
+| — | **1.0.0 production** — config guard, backend guide, network policy | Done |
 
-Details per pack: see `docs/feature-packs/README.md`.
+Details per pack: see `docs/feature-packs/README.md`. Backend: [`docs/BACKEND_INGESTION.md`](BACKEND_INGESTION.md).
 
 ## How to Verify Locally
 
@@ -43,7 +45,7 @@ flutter test
 ## Integration Quick Start (Host App)
 
 ```dart
-final logger = await SmartEyeLogger.init(
+final logger = await ScoutAppLogger.init(
   ScoutLoggerConfig(
     flavor: 'production',
     bulkUploadHandler: (logs) async { /* POST batch */ return true; },
@@ -76,15 +78,28 @@ MaterialApp(
 | 5 | `FlutterError` + `PlatformDispatcher` crash hooks | Done |
 | 6 | Encrypted storage + chrono batch (50 / 120s) + offline backoff | Done (file AES-GCM, not Isar) |
 | 7 | `updateLogLevelsRemote` | Done |
-| 8 | Fatal/critical emergency webhook bypass | Done |
+| 8 | Fatal/critical emergency webhook bypass + retry on failure | Done |
+
+## Deferred (by product choice)
+
+- **Store compaction** — rewrite file after skipping corrupted lines.
+- **Native vitals plugin** — package stays Dart-only; hosts use `runtimeVitalsProbe` or their own channel.
+
+## Example demo
+
+`example/` — run `cd example && flutter run` for interactive SDK showcase (see `example/README.md`).
 
 ## Recommended Next Work (Priority Order)
 
-1. **Emergency dispatch fallback** — persist failed urgent webhooks and retry.
-2. **Store compaction** — rewrite file after skipping corrupted lines.
-3. **Native vitals plugin** — battery/thermal/RAM without host `runtimeVitalsProbe`.
-4. **README + CHANGELOG** — replace template with real package docs.
-5. **Broader tests** — remote log level, Wi-Fi-only sync, backoff under flaky network.
+1. **Crash follow-ups** — optional backup sink; restart-safe pending-crash strategy.
+2. **Batch follow-ups** — jittered backoff; persistent retry state across restarts.
+3. **Network follow-ups** — chunked streaming tests; platform timing calibration.
+
+## Recently completed
+
+- **v1.0.0 production** — `assertProductionReadyConfig`, `BACKEND_INGESTION.md`, `NetworkLoggingPolicy`, PII scrub expansion, `ScoutAppLogger.log` facade.
+- **Pack 06 tests** — Wi‑Fi-only, backoff, remote log level.
+- **Emergency dispatch fallback** — `EmergencyDispatchQueue`.
 
 ## Key Files
 

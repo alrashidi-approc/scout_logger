@@ -89,7 +89,7 @@ class EncryptedLogStore {
     return content
         .split('\n')
         .where((String item) => item.trim().isNotEmpty)
-        .toList(growable: false);
+        .toList();
   }
 
   Future<void> _atomicWriteLines(List<String> lines) async {
@@ -166,6 +166,9 @@ class EncryptedLogStore {
         json['deviceVitals'] as Map<String, dynamic>?,
       ),
       immediateDispatch: (json['immediateDispatch'] as bool?) ?? false,
+      incidentReport: json['incidentReport'] == null
+          ? null
+          : Map<String, dynamic>.from(json['incidentReport'] as Map),
     );
   }
 
@@ -173,6 +176,18 @@ class EncryptedLogStore {
     if (value == null) {
       return null;
     }
+    final Map<String, dynamic> knownKeys = <String, dynamic>{
+      'osVersion': value['osVersion'],
+      'deviceModel': value['deviceModel'],
+      'manufacturer': value['manufacturer'],
+      'ramUsedBytes': value['ramUsedBytes'],
+      'ramFreeBytes': value['ramFreeBytes'],
+      'batteryLevel': value['batteryLevel'],
+      'chargingState': value['chargingState'],
+      'thermalState': value['thermalState'],
+    };
+    final Map<String, dynamic> extended = Map<String, dynamic>.from(value)
+      ..removeWhere((String k, _) => knownKeys.containsKey(k));
     return DeviceVitalsSnapshot(
       osVersion: value['osVersion'] as String? ?? 'unknown',
       deviceModel: value['deviceModel'] as String? ?? 'unknown',
@@ -182,6 +197,7 @@ class EncryptedLogStore {
       batteryLevel: (value['batteryLevel'] as num?)?.toDouble(),
       chargingState: value['chargingState'] as String?,
       thermalState: value['thermalState'] as String?,
+      extendedDetails: extended,
     );
   }
 

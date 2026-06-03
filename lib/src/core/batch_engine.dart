@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 
+import '../config/dispatch_policy.dart';
 import '../config/logger_config.dart';
 import '../models/log_models.dart';
 import 'crypto_store.dart';
+import 'emergency_dispatch_queue.dart';
 import 'network_dispatcher.dart';
 
 class ChronoBatchEngine {
@@ -11,16 +13,19 @@ class ChronoBatchEngine {
     required ScoutLoggerConfig config,
     required EncryptedLogStore store,
     required NetworkDispatcher dispatcher,
+    EmergencyDispatchQueue? emergencyQueue,
     DateTime Function()? nowProvider,
   })  : _config = config,
         _store = store,
         _dispatcher = dispatcher,
+        _emergencyQueue = emergencyQueue,
         _now = nowProvider ?? DateTime.now,
         _lastSyncAt = (nowProvider ?? DateTime.now)();
 
   final ScoutLoggerConfig _config;
   final EncryptedLogStore _store;
   final NetworkDispatcher _dispatcher;
+  final EmergencyDispatchQueue? _emergencyQueue;
   final DateTime Function() _now;
   Timer? _batchTimer;
   Timer? _retryTimer;
@@ -29,8 +34,11 @@ class ChronoBatchEngine {
   bool _syncInProgress = false;
 
   void start() {
-    _batchTimer?.cancel();
-    _batchTimer = Timer.periodic(_config.batchWindow, (_) => syncIfNeeded());
+    if (_config.dispatchPolicy.mode == LogDispatchMode.chronoBatch) {
+      _batchTimer?.cancel();
+      _batchTimer = Timer.periodic(_config.batchWindow, (_) => syncIfNeeded());
+    }
+    unawaited(syncIfNeeded(force: true));
   }
 
   void dispose() {
@@ -40,10 +48,28 @@ class ChronoBatchEngine {
 
   Future<void> enqueue(LogEnvelope envelope) async {
     await _store.insert(envelope);
+    if (_config.dispatchPolicy.mode == LogDispatchMode.perLog) {
+      await _tryUploadSingle(envelope);
+      return;
+    }
     final int count = await _store.count();
     if (count >= _config.batchSize) {
       await syncIfNeeded(force: true);
     }
+  }
+
+  Future<void> _tryUploadSingle(LogEnvelope envelope) async {
+    if (!await _dispatcher.canSyncNow()) {
+      _scheduleBackoff();
+      return;
+    }
+    final bool ok = await _dispatcher.uploadSingle(envelope);
+    if (ok) {
+      await _store.removeFirst(1);
+      _retryCount = 0;
+      return;
+    }
+    _scheduleBackoff();
   }
 
   Future<void> syncIfNeeded({bool force = false}) async {
@@ -59,9 +85,37 @@ class ChronoBatchEngine {
   }
 
   Future<void> _syncIfNeededInternal({required bool force}) async {
+    if (_emergencyQueue != null) {
+      final bool emergencyOk = await _emergencyQueue!.drain(_dispatcher);
+      if (!emergencyOk) {
+        _scheduleBackoff();
+        return;
+      }
+    }
     final DateTime now = _now();
     final int queuedCount = await _store.count();
     if (queuedCount == 0) {
+      return;
+    }
+    if (_config.dispatchPolicy.mode == LogDispatchMode.perLog) {
+      while (await _store.count() > 0) {
+        final List<LogEnvelope> batch = await _store.readBatch(maxItems: 1);
+        if (batch.isEmpty) {
+          return;
+        }
+        if (!await _dispatcher.canSyncNow()) {
+          _scheduleBackoff();
+          return;
+        }
+        final bool ok = await _dispatcher.uploadSingle(batch.first);
+        if (!ok) {
+          _scheduleBackoff();
+          return;
+        }
+        await _store.removeFirst(1);
+      }
+      _retryCount = 0;
+      _lastSyncAt = _now();
       return;
     }
     final bool shouldSyncByTime = now.difference(_lastSyncAt) >= _config.batchWindow;
@@ -93,7 +147,8 @@ class ChronoBatchEngine {
 
   void _scheduleBackoff() {
     _retryCount++;
-    final int seconds = min(300, pow(2, _retryCount).toInt());
+    final int cap = _config.dispatchPolicy.maxRetryBackoffSeconds;
+    final int seconds = min(cap, pow(2, _retryCount).toInt());
     _retryTimer?.cancel();
     _retryTimer = Timer(Duration(seconds: seconds), () => syncIfNeeded(force: true));
   }

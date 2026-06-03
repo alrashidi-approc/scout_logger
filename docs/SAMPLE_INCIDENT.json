@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "1.1",
+  "incidentId": "1739350123456789",
+  "time": {
+    "utc": "2026-06-02T14:22:11.123Z",
+    "local": "2026-06-02T17:22:11.123+03:00"
+  },
+  "timestamp": "2026-06-02T14:22:11.123Z",
+  "event": {
+    "level": "ERROR",
+    "category": "NETWORK",
+    "domain": "EXTERNAL",
+    "message": "API request failed",
+    "stackTrace": "DioException [bad response]: 503",
+    "immediateDispatch": false
+  },
+  "app": {
+    "flavor": "production",
+    "version": "2.4.1",
+    "buildNumber": "204100",
+    "packageName": "com.company.shop",
+    "sdkVersion": "1.0.0",
+    "platform": "android"
+  },
+  "user": {
+    "userId": "usr_8f2a91",
+    "sessionId": "sess_20260602_abc"
+  },
+  "device": {
+    "osVersion": "14",
+    "deviceModel": "Pixel 8",
+    "manufacturer": "Google",
+    "ramUsedBytes": 512000000,
+    "ramFreeBytes": 2000000000,
+    "batteryLevel": 0.42,
+    "chargingState": "discharging",
+    "thermalState": "nominal",
+    "platform": "android",
+    "androidSdkInt": 34,
+    "brand": "google",
+    "isPhysicalDevice": true,
+    "batteryState": "discharging"
+  },
+  "connectivity": {
+    "types": ["wifi"],
+    "isOnline": true
+  },
+  "screen": {
+    "currentRoute": "/checkout",
+    "userFlow": [
+      {
+        "label": "NAV_PUSH",
+        "timestamp": "2026-06-02T14:21:50.000Z",
+        "metadata": { "from": "/", "to": "/home" }
+      },
+      {
+        "label": "NAV_PUSH",
+        "timestamp": "2026-06-02T14:22:05.000Z",
+        "metadata": { "from": "/home", "to": "/checkout" }
+      },
+      {
+        "label": "DEMO_TAP",
+        "timestamp": "2026-06-02T14:22:08.000Z",
+        "metadata": { "screen": "checkout" }
+      }
+    ]
+  },
+  "network": {
+    "triggering": {
+      "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "path": "/api/v1/payments/charge",
+      "method": "POST",
+      "statusCode": 503,
+      "waterfallUs": {
+        "startedAt": 1739350120000000,
+        "firstByteAt": 1739350121200000,
+        "ttfb": 1200000,
+        "payloadDownload": 800000,
+        "total": 2000000
+      },
+      "networkWaterfall": [
+        { "phase": "ttfb", "durationUs": 1200000 },
+        { "phase": "payload_download", "durationUs": 800000 },
+        { "phase": "total", "durationUs": 2000000 }
+      ],
+      "requestHeaders": { "X-Trace-ID": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" },
+      "requestBody": { "orderId": "ord_991", "password": "[REDACTED]" },
+      "responseBody": { "error": "service_unavailable" }
+    },
+    "recent": [
+      {
+        "message": "API request completed",
+        "level": "info",
+        "at": "2026-06-02T14:21:55.000Z",
+        "path": "/api/v1/cart",
+        "method": "GET",
+        "statusCode": 200,
+        "traceId": "trace-cart-1"
+      },
+      {
+        "message": "API request started",
+        "level": "debug",
+        "at": "2026-06-02T14:22:10.000Z",
+        "path": "/api/v1/payments/charge",
+        "method": "POST",
+        "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      }
+    ]
+  },
+  "custom": {
+    "tenant": "kw",
+    "locale": "ar",
+    "featureFlags": { "newCheckout": true },
+    "traceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "path": "/api/v1/payments/charge",
+    "method": "POST",
+    "statusCode": 503
+  },
+  "payload": {
+    "detailLevel": "focused",
+    "sectionsIncluded": {
+      "device": true,
+      "connectivity": true,
+      "screen": true,
+      "network": true,
+      "custom": true,
+      "userFlow": true,
+      "stackTrace": true
+    }
+  }
+}

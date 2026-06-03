@@ -1,21 +1,28 @@
 name: scout_logger
-description: "A new Flutter package project."
-version: 0.0.1
-homepage:
+description: >-
+  Scout App Logger — Flutter client flight recorder: encrypted offline queue,
+  Dio network waterfalls, UI breadcrumbs, crash hooks, and urgent fatal dispatch.
+version: 1.0.0
+homepage: https://github.com/alrashidi-approc/scout_logger
+repository: https://github.com/alrashidi-approc/scout_logger
+issue_tracker: https://github.com/alrashidi-approc/scout_logger/issues
 
 environment:
-  sdk: ^3.11.0
+  sdk: '>=3.10.0 <4.0.0'
   flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  meta: ^1.17.0
   dio: ^5.9.0
   crypto: ^3.0.6
   cryptography: ^2.7.0
   uuid: ^4.5.1
   device_info_plus: ^11.5.0
   connectivity_plus: ^7.0.0
+  package_info_plus: ^9.0.0
+  mailer: ^6.6.0
 
 dev_dependencies:
   flutter_test:

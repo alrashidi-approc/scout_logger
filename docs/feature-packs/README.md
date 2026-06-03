@@ -9,6 +9,7 @@ Implemented packs focused on core SDK responsibility:
 3. `03-batching-resiliency-and-drain-control.md`
 4. `04-network-waterfall-and-error-signal-quality.md`
 5. `05-vitals-completeness-runtime-probe.md`
+6. `06-dispatch-policy-and-level-tests.md`
 
 Each pack contains:
 
