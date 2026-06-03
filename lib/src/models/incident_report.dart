@@ -5,10 +5,11 @@ import '../config/blackbox_app_context.dart';
 import '../config/incident_sharing_policy.dart';
 import '../core/connectivity_snapshot.dart';
 import '../config/sdk_constants.dart';
+import '../util/incident_fingerprint.dart';
 import '../util/incident_time_format.dart';
 import 'log_models.dart';
 
-const String kIncidentSchemaVersion = '1.1';
+const String kIncidentSchemaVersion = '1.2';
 
 Map<String, dynamic> buildIncidentReport({
   required LogEnvelope envelope,
@@ -18,6 +19,17 @@ Map<String, dynamic> buildIncidentReport({
   List<Map<String, dynamic>> recentNetwork = const <Map<String, dynamic>>[],
   String? currentRoute,
   IncidentSharingPolicy sharingPolicy = const IncidentSharingPolicy(),
+  Map<String, String> tags = const <String, String>{},
+  Map<String, Map<String, dynamic>> contexts = const <String, Map<String, dynamic>>{},
+  String? release,
+  String? environment,
+  DateTime? sessionStartedAt,
+  int? sessionIncidentIndex,
+  int? occurrenceCount,
+  int? occurrencesSinceLastReport,
+  String? occurrenceReportReason,
+  DateTime? occurrenceFirstSeenAt,
+  DateTime? occurrenceLastSeenAt,
 }) {
   final IncidentSectionSet sections =
       sharingPolicy.resolveSections(envelope.level, envelope.category);
@@ -68,6 +80,18 @@ Map<String, dynamic> buildIncidentReport({
     if (app.userMetadata.isNotEmpty) 'metadata': app.userMetadata,
   };
 
+  final List<String> fingerprint = buildFingerprint(
+    category: envelope.category,
+    message: envelope.message,
+    stackTrace: envelope.stackTrace,
+    tags: tags,
+  );
+  final String groupingKey = computeGroupingKey(
+    message: envelope.message,
+    stackTrace: envelope.stackTrace,
+    fingerprint: fingerprint,
+  );
+
   return <String, dynamic>{
     'schemaVersion': kIncidentSchemaVersion,
     'incidentId': envelope.id,
@@ -81,13 +105,43 @@ Map<String, dynamic> buildIncidentReport({
       'stackTrace': sections.includeStackTrace ? envelope.stackTrace : null,
       'immediateDispatch': envelope.immediateDispatch,
     },
+    'deployment': <String, dynamic>{
+      'flavor': flavor,
+      'environment': environment ?? flavor,
+      'appName': app.displayName,
+      'release': release ?? '${app.packageName}@${app.appVersion}+${app.buildNumber}',
+    },
     'app': <String, dynamic>{
+      'name': app.displayName,
       'flavor': flavor,
       'version': app.appVersion,
       'buildNumber': app.buildNumber,
       'packageName': app.packageName,
       'sdkVersion': kScoutLoggerSdkVersion,
       'platform': Platform.operatingSystem,
+    },
+    'session': <String, dynamic>{
+      if (app.sessionId != null) 'sessionId': app.sessionId,
+      if (sessionStartedAt != null)
+        'startedAt': sessionStartedAt.toUtc().toIso8601String(),
+      if (sessionIncidentIndex != null) 'incidentIndex': sessionIncidentIndex,
+    },
+    'triage': <String, dynamic>{
+      'fingerprint': fingerprint,
+      'groupingKey': groupingKey,
+      if (tags.isNotEmpty) 'tags': tags,
+      if (contexts.isNotEmpty) 'contexts': contexts,
+      if (occurrenceCount != null)
+        'occurrence': <String, dynamic>{
+          'count': occurrenceCount,
+          if (occurrencesSinceLastReport != null)
+            'sinceLastReport': occurrencesSinceLastReport,
+          if (occurrenceReportReason != null) 'reportReason': occurrenceReportReason,
+          if (occurrenceFirstSeenAt != null)
+            'firstSeenAt': occurrenceFirstSeenAt.toUtc().toIso8601String(),
+          if (occurrenceLastSeenAt != null)
+            'lastSeenAt': occurrenceLastSeenAt.toUtc().toIso8601String(),
+        },
     },
     'user': user,
     'device': device,

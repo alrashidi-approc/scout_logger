@@ -19,6 +19,12 @@ class EmailReportingConfig {
     this.allowInsecure = false,
     this.subjectPrefix = '[Mobile Incident]',
     this.senderName,
+    this.dedupeByGroupingKey = true,
+    this.emailCooldown = const Duration(hours: 1),
+    this.emailOnFirstOccurrence = true,
+    this.emailOnRollup = true,
+    this.maxBreadcrumbsInEmail = 5,
+    this.maxStackTraceLines = 12,
   });
 
   final bool enabled;
@@ -33,6 +39,12 @@ class EmailReportingConfig {
   final bool allowInsecure;
   final String subjectPrefix;
   final String? senderName;
+  final bool dedupeByGroupingKey;
+  final Duration emailCooldown;
+  final bool emailOnFirstOccurrence;
+  final bool emailOnRollup;
+  final int maxBreadcrumbsInEmail;
+  final int maxStackTraceLines;
 
   bool shouldEmail(LogLevel level) => enabled && levels.contains(level);
 

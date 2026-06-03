@@ -26,10 +26,12 @@ class ScoutBootstrap {
       ScoutLoggerConfig.blackbox(
         flavor: 'demo',
         autoResolveAppInfo: true,
+        appName: 'Scout Logger Demo',
         appContext: const BlackboxAppContext(
           appVersion: '0.0.0',
           buildNumber: '0',
           packageName: 'com.scoutlogger.demo',
+          appName: 'Scout Logger Demo',
           globalMetadata: <String, dynamic>{'demo': true},
         ),
         dispatchPolicy: const LogDispatchPolicy(
@@ -42,6 +44,11 @@ class ScoutBootstrap {
         networkLoggingPolicy: const NetworkLoggingPolicy(
           scope: NetworkLogScope.errorsOnly,
           nonErrorStatusCodes: <int>{401, 403, 404},
+        ),
+        environment: 'demo',
+        productInsightsPolicy: const ProductInsightsPolicy(
+          trackAppLifecycle: true,
+          sampleRate: 1.0,
         ),
         onBatchIncidents: hub.handleBatchJson,
         onUrgentIncident: hub.handleUrgentJson,

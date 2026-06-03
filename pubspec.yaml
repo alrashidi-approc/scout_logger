@@ -2,7 +2,7 @@ name: scout_logger
 description: >-
   Scout App Logger — Flutter client flight recorder: encrypted offline queue,
   Dio network waterfalls, UI breadcrumbs, crash hooks, and urgent fatal dispatch.
-version: 1.0.0
+version: 1.1.0
 homepage: https://github.com/alrashidi-approc/scout_logger
 repository: https://github.com/alrashidi-approc/scout_logger
 issue_tracker: https://github.com/alrashidi-approc/scout_logger/issues

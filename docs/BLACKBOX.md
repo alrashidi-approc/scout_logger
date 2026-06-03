@@ -76,6 +76,7 @@ Optional: `runtimeVitalsProbe` for extra thermal/RAM if needed.
 | `appVersion` | yes |
 | `buildNumber` | yes |
 | `packageName` | yes |
+| `appName` | recommended — sent as `app.name` / `deployment.appName` for backend grouping |
 | `userId` / `sessionId` | recommended |
 | `globalMetadata` | optional |
 
