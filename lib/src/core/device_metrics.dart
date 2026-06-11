@@ -20,6 +20,8 @@ class DeviceVitalsCollector {
     String os = Platform.operatingSystemVersion;
     String model = 'unknown';
     String maker = 'unknown';
+    String? deviceName;
+    String? localizedModel;
     final Map<String, dynamic> extended = <String, dynamic>{
       'platform': Platform.operatingSystem,
     };
@@ -29,11 +31,15 @@ class DeviceVitalsCollector {
       os = info.version.release;
       model = info.model;
       maker = info.manufacturer;
+      localizedModel = info.model.trim().isEmpty ? null : info.model;
+      final String label = '${info.brand} ${info.model}'.trim();
+      deviceName = label.isEmpty ? null : label;
       if (collectExtendedDetails) {
         extended.addAll(<String, dynamic>{
           'androidSdkInt': info.version.sdkInt,
           'brand': info.brand,
           'device': info.device,
+          'product': info.product,
           'isPhysicalDevice': info.isPhysicalDevice,
           'supportedAbis': info.supportedAbis,
         });
@@ -43,6 +49,10 @@ class DeviceVitalsCollector {
       os = info.systemVersion;
       model = info.utsname.machine;
       maker = 'Apple';
+      final String name = info.name.trim();
+      deviceName = name.isEmpty ? null : name;
+      final String localized = info.localizedModel.trim();
+      localizedModel = localized.isEmpty ? null : localized;
       if (collectExtendedDetails) {
         extended.addAll(<String, dynamic>{
           'systemName': info.systemName,
@@ -52,11 +62,14 @@ class DeviceVitalsCollector {
       }
     }
 
+    final Map<String, dynamic> runtime = await _readRuntimeProbe();
+    deviceName ??= _asString(runtime['deviceName']);
+    localizedModel ??= _asString(runtime['localizedModel']);
+
     final Map<Object?, Object?> batteryRaw =
         await _readMap('battery') ?? const <Object?, Object?>{};
     final Map<Object?, Object?> thermalRaw =
         await _readMap('thermal') ?? const <Object?, Object?>{};
-    final Map<String, dynamic> runtime = await _readRuntimeProbe();
     final int usedRam = ProcessInfo.currentRss;
     final int? freeRamBytes =
         _asInt(batteryRaw['freeRamBytes']) ?? _asInt(runtime['freeRamBytes']);
@@ -72,6 +85,8 @@ class DeviceVitalsCollector {
       osVersion: os,
       deviceModel: model,
       manufacturer: maker,
+      deviceName: deviceName,
+      localizedModel: localizedModel,
       ramUsedBytes: usedRam,
       ramFreeBytes: freeRamBytes,
       batteryLevel: batteryLevel,

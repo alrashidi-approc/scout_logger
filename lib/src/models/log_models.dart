@@ -30,6 +30,8 @@ class DeviceVitalsSnapshot {
     required this.deviceModel,
     required this.manufacturer,
     required this.ramUsedBytes,
+    this.deviceName,
+    this.localizedModel,
     this.ramFreeBytes,
     this.batteryLevel,
     this.chargingState,
@@ -40,6 +42,10 @@ class DeviceVitalsSnapshot {
   final String osVersion;
   final String deviceModel;
   final String manufacturer;
+  /// User-visible label (iOS Settings name; Android brand + model).
+  final String? deviceName;
+  /// Marketing model when available (e.g. iPhone 16 Pro).
+  final String? localizedModel;
   final int ramUsedBytes;
   final int? ramFreeBytes;
   final double? batteryLevel;
@@ -51,6 +57,8 @@ class DeviceVitalsSnapshot {
         'osVersion': osVersion,
         'deviceModel': deviceModel,
         'manufacturer': manufacturer,
+        if (deviceName != null) 'deviceName': deviceName,
+        if (localizedModel != null) 'localizedModel': localizedModel,
         'ramUsedBytes': ramUsedBytes,
         'ramFreeBytes': ramFreeBytes,
         'batteryLevel': batteryLevel,

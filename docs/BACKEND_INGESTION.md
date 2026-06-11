@@ -46,12 +46,31 @@ Return `true` from batch handler only after durable server-side accept. Failed b
 | `screen.userFlow` | Ordered UI breadcrumbs before the incident |
 | `device.*` | OS, model, RAM, battery (see below) |
 
+## Device fields (`device` block)
+
+| Field | Meaning |
+|-------|---------|
+| `deviceName` | **Human label** — iOS: name from Settings (e.g. “Mahmoud’s iPhone”); Android: `brand + model` |
+| `localizedModel` | **Marketing model** — iOS: e.g. “iPhone 16 Pro”; Android: `model` |
+| `deviceModel` | Technical id — iOS: `iPhone17,1`; Android: model string |
+| `manufacturer` | e.g. Apple, Google, Samsung |
+| `osVersion` | OS release (e.g. `18.6`, `14`) |
+| `platform` | `ios` / `android` |
+| `ramUsedBytes` / `ramFreeBytes` | App RSS; free RAM needs `runtimeVitalsProbe` |
+| `batteryLevel` | 0.0–1.0 via probe |
+| `chargingState` / `thermalState` | Via probe |
+| `isPhysicalDevice` | `false` = simulator/emulator |
+| `identifierForVendor` | iOS IDFV (extended details) |
+| `androidSdkInt`, `brand`, `product`, `supportedAbis` | Android extended details |
+
+**Privacy:** `deviceName` on iOS may contain the user’s real name — treat as PII in storage/retention.
+
 ## Correlating with server logs
 
 1. Read `network.triggering.traceId` for network errors (`custom` does not repeat Dio fields).
 2. App-only fields live in `custom` via `customMetadata` on `log()`, `setGlobalMetadata`, or Dio `options.scoutIncidentCustom`.
-2. Match against API gateway / service logs using the same header the app sent: **`X-Trace-ID`**.
-3. Use `network.triggering.waterfallUs` or `networkWaterfallSec` for latency breakdown (TTFB vs download).
+3. Match against API gateway / service logs using the same header the app sent: **`X-Trace-ID`**.
+4. Use `network.triggering.waterfallUs` or `networkWaterfallSec` for latency breakdown (TTFB vs download).
 
 ## Device battery field
 

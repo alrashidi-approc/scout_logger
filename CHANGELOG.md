@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`device.deviceName`** (iOS Settings name; Android `brand + model`) and **`device.localizedModel`** (marketing name, e.g. iPhone 16 Pro).
+- Android extended: **`product`** in device block when `autoCollectDeviceDetails` is on.
+- `runtimeVitalsProbe` may override `deviceName` / `localizedModel`.
+
 ## [1.2.0] - 2026-06-03
 
 ### Added

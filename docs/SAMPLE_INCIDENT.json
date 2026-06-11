@@ -71,6 +71,8 @@
     "osVersion": "14",
     "deviceModel": "Pixel 8",
     "manufacturer": "Google",
+    "deviceName": "google Pixel 8",
+    "localizedModel": "Pixel 8",
     "ramUsedBytes": 512000000,
     "ramFreeBytes": 2000000000,
     "batteryLevel": 0.42,
