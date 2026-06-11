@@ -4,6 +4,9 @@ enum NetworkLogScope {
   all,
 
   /// Log only failures (still respects [NetworkLoggingPolicy.nonErrorStatusCodes]).
+  ///
+  /// Recommended for production: success/request logs still feed [RecentNetworkBuffer]
+  /// on errors but are not uploaded (no schema 1.2 incident — backend expects incidents only).
   errorsOnly,
 }
 

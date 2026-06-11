@@ -91,8 +91,16 @@ class ScoutLoggerConfig {
     String? environment,
     ProductInsightsPolicy productInsightsPolicy = const ProductInsightsPolicy(),
   }) {
-    BulkUploadHandler bulk = (List<LogEnvelope> logs) =>
-        onBatchIncidents(logs.map((LogEnvelope e) => e.toIncidentJson()).toList());
+    BulkUploadHandler bulk = (List<LogEnvelope> logs) async {
+      final List<String> incidents = <String>[
+        for (final LogEnvelope log in logs)
+          if (log.incidentReport != null) log.toIncidentJson(),
+      ];
+      if (incidents.isEmpty) {
+        return true;
+      }
+      return onBatchIncidents(incidents);
+    };
 
     if (serverRouting != null) {
       bulk = (List<LogEnvelope> logs) async {
@@ -124,6 +132,9 @@ class ScoutLoggerConfig {
     if (onSingleIncident != null) {
       bulk = (List<LogEnvelope> logs) async {
         for (final LogEnvelope log in logs) {
+          if (log.incidentReport == null) {
+            continue;
+          }
           final bool ok = await onSingleIncident(log.toIncidentJson());
           if (!ok) {
             return false;

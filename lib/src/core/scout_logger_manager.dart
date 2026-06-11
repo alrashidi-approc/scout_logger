@@ -266,7 +266,9 @@ class ScoutLogger {
         buildIncident ? _breadcrumbStore.deepCopy() : const <Breadcrumb>[];
     ConnectivitySnapshot? connectivity;
     if (buildIncident) {
-      connectivity = await ConnectivitySnapshot.capture();
+      connectivity = await ConnectivitySnapshot.capture(
+        checker: _config.connectivityChecker,
+      );
     }
 
     final String id = '${DateTime.now().microsecondsSinceEpoch}';
@@ -369,7 +371,9 @@ class ScoutLogger {
       }
       return;
     }
-    await _batchEngine.enqueue(envelope);
+    if (incidentReport != null) {
+      await _batchEngine.enqueue(envelope);
+    }
   }
 
   int _severity(LogLevel level) {

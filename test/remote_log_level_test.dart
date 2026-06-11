@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scout_logger/src/config/dispatch_policy.dart';
+import 'package:scout_logger/src/config/logger_config.dart';
+import 'package:scout_logger/src/config/product_insights_policy.dart';
 import 'package:scout_logger/src/core/scout_logger_manager.dart';
 import 'package:scout_logger/src/models/log_models.dart';
 
@@ -26,6 +28,10 @@ void main() {
         queueStoragePath: '$base/queue.enc',
         emergencyStoragePath: '$base/emergency.enc',
         buildFullIncidentOnWarnOrHigher: false,
+      ).copyWith(
+        productInsightsPolicy: const ProductInsightsPolicy(
+          trackAppLifecycle: false,
+        ),
       ),
     );
 
@@ -41,6 +47,14 @@ void main() {
       level: LogLevel.info,
       message: 'info',
     );
+    expect(uploaded, 0);
+
+    await logger.log(
+      domain: Domain.internal,
+      category: LogCategory.logic,
+      level: LogLevel.error,
+      message: 'error-before-raise',
+    );
     expect(uploaded, 1);
 
     await logger.updateLogLevelsRemote(minimumLevel: LogLevel.warn);
@@ -53,9 +67,27 @@ void main() {
     await logger.log(
       domain: Domain.internal,
       category: LogCategory.logic,
-      level: LogLevel.warn,
-      message: 'warn-after-raise',
+      level: LogLevel.error,
+      message: 'error-after-raise',
     );
     expect(uploaded, 2);
   });
+}
+
+extension on ScoutLoggerConfig {
+  ScoutLoggerConfig copyWith({ProductInsightsPolicy? productInsightsPolicy}) {
+    return ScoutLoggerConfig(
+      flavor: flavor,
+      bulkUploadHandler: bulkUploadHandler,
+      emergencyWebhookHandler: emergencyWebhookHandler,
+      appContext: appContext,
+      encryptionKey: encryptionKey,
+      dispatchPolicy: dispatchPolicy,
+      queueStoragePath: queueStoragePath,
+      emergencyStoragePath: emergencyStoragePath,
+      connectivityChecker: connectivityChecker,
+      buildFullIncidentOnWarnOrHigher: buildFullIncidentOnWarnOrHigher,
+      productInsightsPolicy: productInsightsPolicy ?? this.productInsightsPolicy,
+    );
+  }
 }

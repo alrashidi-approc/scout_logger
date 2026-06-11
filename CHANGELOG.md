@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Android extended: **`product`** in device block when `autoCollectDeviceDetails` is on.
 - `runtimeVitalsProbe` may override `deviceName` / `localizedModel`.
 
+### Fixed
+
+- **`NetworkLogScope.all` + blackbox upload:** DEBUG/INFO network logs no longer enter the upload queue (they are not schema 1.2 incidents). Batch upload skips any envelope without `incidentReport` so the backend is not sent raw `LogEnvelope` JSON.
+
 ## [1.2.0] - 2026-06-03
 
 ### Added

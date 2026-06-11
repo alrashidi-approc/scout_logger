@@ -393,10 +393,10 @@ networkLoggingPolicy: const NetworkLoggingPolicy(
 
 | `NetworkLogScope` | Behavior |
 |-------------------|----------|
-| `all` (default) | Request start, success responses, and failures |
-| `errorsOnly` | Failures only (still honors `nonErrorStatusCodes`) |
+| `all` | Request start + success + failure logs (feeds `network.recent` on errors). **Only ERROR+ incidents are uploaded** — DEBUG/INFO are not schema 1.2 JSON. |
+| `errorsOnly` | Failures only (still honors `nonErrorStatusCodes`). **Recommended for production.** |
 
-`401` is in the default ignore list so unauthorized responses are not logged as `API request failed`. Use **`errorsOnly`** if you also want to skip request/success logs for those calls.
+`401` is in the default ignore list so unauthorized responses are not logged as `API request failed`. Use **`errorsOnly`** to avoid extra Dio noise; use **`all`** only if you need richer `network.recent` context on failures (upload behavior is the same for errors).
 
 ---
 
@@ -584,6 +584,49 @@ After `ScoutBootstrap.init`, uncaught errors are logged as **FATAL** and sent to
 | `appName` set | All incidents land in the right backend app bucket |
 | `onBatchIncidents` / `onUrgentIncident` implemented | Data reaches your servers |
 | Optional `emailReporting` | Short alerts; deduped by `groupingKey` |
+
+---
+
+## With `dio_resilient` (retries + cache + offline queue)
+
+Use **one shared `Dio`**: Scout for incidents, `dio_resilient` for resilience. Pin both by git tag.
+
+```yaml
+dependencies:
+  scout_logger:
+    git:
+      url: https://github.com/alrashidi-approc/scout_logger.git
+      ref: v1.2.2
+  dio_resilient:
+    git:
+      url: https://github.com/diyar/dio_resilient.git
+      ref: v2.2.2
+```
+
+```dart
+dio = Dio(BaseOptions(baseUrl: baseUrl));
+scout = await ScoutAppLogger.init(ScoutLoggerConfig.blackbox(
+  networkLoggingPolicy: const NetworkLoggingPolicy(
+    scope: NetworkLogScope.errorsOnly,
+    nonErrorStatusCodes: <int>{401, 403, 404},
+  ),
+  // ...
+));
+dio.attachScoutLogger(scout);
+
+resilient = await DioResilient.attach(
+  dio: dio,
+  databaseDirectoryPath: dir.path,
+  options: const DioResilientOptions(
+    requestLogMode: RequestLogMode.errorsOnly,
+  ),
+);
+
+// Use resilient.get/post for resilient routes — Scout still logs real HTTP failures
+await resilient.get('/inbox', options: Options()..scoutIncidentCustom = {'feature': 'inbox'});
+```
+
+See [dio_resilient README — scout_logger section](https://github.com/diyar/dio_resilient#using-with-scout_logger-recommended-epa--production-stack) for attach order and what each layer logs.
 
 ---
 
